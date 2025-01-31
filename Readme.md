@@ -1,5 +1,7 @@
 # Stock AI Bot - README
 
+## Work in Progress..
+
 ## Overview
 This Stock AI Bot gathers stock market data, analyzes trends using RSI & MACD indicators, and fetches insider trading activity from OpenInsider. The goal is to identify undervalued stocks based on multiple indicators and AI analysis.
 
@@ -29,7 +31,7 @@ This Stock AI Bot gathers stock market data, analyzes trends using RSI & MACD in
    ```
 
 ## Usage
-1. Modify `ticker` in `stockbot_gui.py` to the stock symbol of your choice.
+1. Modify `ticker` in `stockbot_gui`.py` to the stock symbol of your choice.
 2. Run the script:
    ```sh
    python stock_ai_bot.py

@@ -1,0 +1,10 @@
+requests
+yfinance
+pandas
+numpy
+tkinter
+textblob
+scikit-learn
+ollama
+bs4
+dotenv
