@@ -32,7 +32,6 @@ def get_stock_data(ticker):
     return data_dict  # Return a dictionary of dataframes
 
 
-
 def calculate_rsi(data, period=14):
     """Calculate Relative Strength Index (RSI)."""
     delta = data['Close'].diff()
@@ -115,20 +114,12 @@ def get_news_sentiment(ticker):
         return avg_sentiment
     return None
 
-def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment):
-    """Use Ollama AI to analyze stock data and provide insights."""
-    
-    # Prevent IndexError
+def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age):
+    """Use Ollama AI to analyze stock data and provide insights based on selected checkboxes."""
     last_rsi = rsi.iloc[-1] if not rsi.empty else "N/A"
     last_macd = macd.iloc[-1] if not macd.empty else "N/A"
     last_signal = signal.iloc[-1] if not signal.empty else "N/A"
-
-    print(f"RSI Value: {rsi.iloc[-1] if not rsi.empty else 'N/A'}")
-    print(f"MACD Value: {macd.iloc[-1] if not macd.empty else 'N/A'}")
-    print(f"Signal Line Value: {signal.iloc[-1] if not signal.empty else 'N/A'}")
-    print(f"News Sentiment: {news_sentiment}")
-    print(f"Insider Trading Data: {insider_trades[:2]}")  # Print only first two entries for clarity
-
+    
     prompt = f"""
     Analyze the following stock data for {ticker}:
     RSI: {last_rsi}
@@ -136,15 +127,78 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentimen
     Insider Trades: {insider_trades[:500]}... (truncated)
     News Sentiment: {news_sentiment}
     
+    Consider the following investor preferences:
+    Risk Level: {risk_level}
+    Age: {age} years. Lower the age increase the risk tolerance because more time to recover.
+    Investment Duration: {investment_duration}
+    
     Based on this information, predict the stock's short-term trend and justify your reasoning.
     """
     response = ollama.chat(model='llama3.2:latest', messages=[{"role": "user", "content": prompt}])
     return response["message"]["content"]
 
 
+def show_dashboard(ticker, rsi, macd, signal, insider_trades, news_sentiment, ai_analysis):
+    """Display a GUI dashboard with stock analysis results and user options."""
+    root = tk.Tk()
+    root.title(f"Stock Analysis Dashboard - {ticker}")
+    
+    frame = ttk.Frame(root, padding=10)
+    frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    
+    ttk.Label(frame, text=f"Ticker: {ticker}", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=2, pady=5)
+    ttk.Label(frame, text=f"RSI: {rsi.iloc[-1]:.2f}").grid(row=1, column=0, sticky=tk.W)
+    ttk.Label(frame, text=f"MACD: {macd.iloc[-1]:.2f}").grid(row=2, column=0, sticky=tk.W)
+    ttk.Label(frame, text=f"Signal: {signal.iloc[-1]:.2f}").grid(row=3, column=0, sticky=tk.W)
+    ttk.Label(frame, text=f"News Sentiment: {news_sentiment:.2f}").grid(row=4, column=0, sticky=tk.W)
+    
+    # Checkboxes for Risk Level
+    risk_label = ttk.Label(frame, text="Select Risk Level:")
+    risk_label.grid(row=5, column=0, sticky=tk.W)
+    risk_var = tk.StringVar(value="Medium")
+    low_risk = ttk.Radiobutton(frame, text="Low", variable=risk_var, value="Low")
+    med_risk = ttk.Radiobutton(frame, text="Medium", variable=risk_var, value="Medium")
+    high_risk = ttk.Radiobutton(frame, text="High", variable=risk_var, value="High")
+    low_risk.grid(row=6, column=0, sticky=tk.W)
+    med_risk.grid(row=6, column=1, sticky=tk.W)
+    high_risk.grid(row=6, column=2, sticky=tk.W)
+    
+    # Checkboxes for Investment Duration
+    duration_label = ttk.Label(frame, text="Select Investment Duration:")
+    duration_label.grid(row=7, column=0, sticky=tk.W)
+    duration_var = tk.StringVar(value="Medium-term")
+    short_term = ttk.Radiobutton(frame, text="Short-term (<1 month)", variable=duration_var, value="Short-term")
+    medium_term = ttk.Radiobutton(frame, text="Medium-term (6 months - 1 year)", variable=duration_var, value="Medium-term")
+    long_term = ttk.Radiobutton(frame, text="Long-term (1-3 years)", variable=duration_var, value="Long-term")
+    short_term.grid(row=8, column=0, sticky=tk.W)
+    medium_term.grid(row=8, column=1, sticky=tk.W)
+    long_term.grid(row=8, column=2, sticky=tk.W)
+    
+    insider_text = tk.Text(frame, height=5, width=60)
+    insider_text.insert(tk.END, f"Insider Trades: {insider_trades[:500]}... (truncated)")
+    insider_text.grid(row=9, column=0, columnspan=2, pady=5)
+    
+    ai_text = tk.Text(frame, height=10, width=60)
+    ai_text.insert(tk.END, f"AI Analysis: {ai_analysis}")
+    ai_text.grid(row=10, column=0, columnspan=2, pady=5)
+    
+    ttk.Button(frame, text="Close", command=root.destroy).grid(row=11, column=0, columnspan=2, pady=10)
+    
+    root.mainloop()
+
+
+
 def scan_stocks():
     """Continuously scan the stock market and identify investment opportunities."""
     tickers = ["AAPL", "TSLA", "NVDA", "AMZN", "GOOGL"]  # Expand with more tickers
+    medium = "Medium Risk - 60% safe investments, 40% risky investments with moderate returns"
+    lowrisk = "Low Risk - 80% safe investments, 20% risky investments with potential returns"
+    highrisk = "High Risk  - 40% safe investments, 60% risky investments with big potential returns"
+    shortterm = "Short-term - 1 month or less"
+    mediumterm = "Medium-term - 6 months to 1 year"
+    longterm = "Long-term - 1 to 3 years"
+    age = "19"
+    
     
     while True:
         for ticker in tickers:
@@ -161,10 +215,21 @@ def scan_stocks():
 
             insider_trades = get_insider_trading(ticker)
             news_sentiment = get_news_sentiment(ticker)
-            ai_analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment)
+            
+            # Set default risk level and investment duration (change as needed)
+            risk_level = medium # Default to medium risk
+            investment_duration = mediumterm # Default to short-term
+
+            ai_analysis = analyze_with_ollama(
+                ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age
+            )
             
             print(f"AI Analysis for {ticker}: {ai_analysis}")
+            
+            # Show dashboard for the first scanned stock (optional)
+            show_dashboard(ticker, rsi, macd, signal, insider_trades, news_sentiment, ai_analysis)
 
+        print("Sleeping for 1 hour before next scan...")
         time.sleep(3600)  # Scan every hour
 
 
