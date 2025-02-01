@@ -153,13 +153,23 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentimen
     Fundatmental Data: {fund_data}
     Insider Trades: {insider_trades[:500]}... (truncated)
     News Sentiment: {news_sentiment}
-    
+    Investing Amount: 100$
+
     Consider the following investor preferences:
     Risk Level: {risk_level}
     Age: {age} years. Lower the age increase the risk tolerance because more time to recover.
     Investment Duration: {investment_duration}
     
-    Based on this information, predict the stock's short-term trend and justify your reasoning.
+    Based on this information, predict the stock's short-term trend.
+    Print out the PE ratio then a Confidence percentage of the prediction. 
+    Base your reasoning by past performance insider trading and news sentiments. Strongly consider insider trading if there is a Purchase of over 150k$. If there is too many sales then it is a red flag.
+
+    Example Output Format:
+    PE Ratio: 20
+    Confidence: 80%
+    Reasoning: The stock has a low PE ratio and strong insider buying, indicating a potential uptrend.
+    News sentiment is positive, and the MACD is crossing above the signal line.
+    Amount of investment: 100$
     """
     response = ollama.chat(model='llama3.2:latest', messages=[{"role": "user", "content": prompt}])
     return response["message"]["content"]
