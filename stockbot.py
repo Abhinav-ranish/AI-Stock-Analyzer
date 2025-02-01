@@ -2,7 +2,8 @@ import requests
 import yfinance as yf
 import pandas as pd
 import numpy as np
-import tkinter as tk
+from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 from tkinter import ttk
 from textblob import TextBlob
 from sklearn.linear_model import LinearRegression
@@ -15,21 +16,33 @@ import os
 load_dotenv()  # Load environment variables from .env file
 NEWS_API_KEY = os.getenv("NEWSAPI_KEY")
 
+app = Flask(__name__)
+CORS(app)
+
 def get_stock_data(ticker):
     stock = yf.Ticker(ticker)
-    data_dict = {}  # Dictionary to store different timeframes
+    data_dict = {}
 
-    for timeframe in ['7d', '1mo', '6mo', '1y', '5y']:
+    for timeframe in ['7d', '1mo', '3mo','6mo', '1y', '5y']:
         data = stock.history(period=timeframe)
         if data.empty:
             print(f"Warning: No data found for {ticker} in {timeframe} timeframe.")
-        else:
-            print(f"Data retrieved for {ticker} in {timeframe}:")
-            print(data.head())  # Print first few rows to debug
+            continue
 
-        data_dict[timeframe] = data  # Store in dictionary
+        data_dict[timeframe] = data  
 
-    return data_dict  # Return a dictionary of dataframes
+    if '1y' in data_dict and not data_dict['1y'].empty:
+        data_1y = data_dict['1y']
+        data_1y['SMA_50'] = data_1y['Close'].rolling(window=50).mean()
+        data_1y['SMA_200'] = data_1y['Close'].rolling(window=200).mean()
+        
+        return {
+            'history': data_dict,
+            'SMA_50': data_1y['SMA_50'].iloc[-1] if len(data_1y) >= 50 else None,
+            'SMA_200': data_1y['SMA_200'].iloc[-1] if len(data_1y) >= 200 else None
+        }
+    
+    return {'history': data_dict, 'SMA_50': None, 'SMA_200': None}
 
 
 def calculate_rsi(data, period=14):
@@ -40,6 +53,17 @@ def calculate_rsi(data, period=14):
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
+
+def get_fundamental_data(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    
+    return {
+        'pe_ratio': info.get('trailingPE'),
+        'ps_ratio': info.get('priceToSalesTrailing12Months'),
+        'earnings_growth': info.get('earningsGrowth'),
+        'revenue_growth': info.get('revenueGrowth')
+    }
 
 def calculate_macd(data):
     """Calculate MACD and Signal Line."""
@@ -114,7 +138,7 @@ def get_news_sentiment(ticker):
         return avg_sentiment
     return None
 
-def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age):
+def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, fund_data, sma_50, sma_200):
     """Use Ollama AI to analyze stock data and provide insights based on selected checkboxes."""
     last_rsi = rsi.iloc[-1] if not rsi.empty else "N/A"
     last_macd = macd.iloc[-1] if not macd.empty else "N/A"
@@ -123,7 +147,10 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentimen
     prompt = f"""
     Analyze the following stock data for {ticker}:
     RSI: {last_rsi}
+    50-day SMA: {sma_50}
+    200-day SMA: {sma_200}
     MACD: {last_macd}, Signal: {last_signal}
+    Fundatmental Data: {fund_data}
     Insider Trades: {insider_trades[:500]}... (truncated)
     News Sentiment: {news_sentiment}
     
@@ -138,100 +165,103 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentimen
     return response["message"]["content"]
 
 
-def show_dashboard(ticker, rsi, macd, signal, insider_trades, news_sentiment, ai_analysis):
-    """Display a GUI dashboard with stock analysis results and user options."""
-    root = tk.Tk()
-    root.title(f"Stock Analysis Dashboard - {ticker}")
-    
-    frame = ttk.Frame(root, padding=10)
-    frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-    
-    ttk.Label(frame, text=f"Ticker: {ticker}", font=("Arial", 14, "bold")).grid(row=0, column=0, columnspan=2, pady=5)
-    ttk.Label(frame, text=f"RSI: {rsi.iloc[-1]:.2f}").grid(row=1, column=0, sticky=tk.W)
-    ttk.Label(frame, text=f"MACD: {macd.iloc[-1]:.2f}").grid(row=2, column=0, sticky=tk.W)
-    ttk.Label(frame, text=f"Signal: {signal.iloc[-1]:.2f}").grid(row=3, column=0, sticky=tk.W)
-    ttk.Label(frame, text=f"News Sentiment: {news_sentiment:.2f}").grid(row=4, column=0, sticky=tk.W)
-    
-    # Checkboxes for Risk Level
-    risk_label = ttk.Label(frame, text="Select Risk Level:")
-    risk_label.grid(row=5, column=0, sticky=tk.W)
-    risk_var = tk.StringVar(value="Medium")
-    low_risk = ttk.Radiobutton(frame, text="Low", variable=risk_var, value="Low")
-    med_risk = ttk.Radiobutton(frame, text="Medium", variable=risk_var, value="Medium")
-    high_risk = ttk.Radiobutton(frame, text="High", variable=risk_var, value="High")
-    low_risk.grid(row=6, column=0, sticky=tk.W)
-    med_risk.grid(row=6, column=1, sticky=tk.W)
-    high_risk.grid(row=6, column=2, sticky=tk.W)
-    
-    # Checkboxes for Investment Duration
-    duration_label = ttk.Label(frame, text="Select Investment Duration:")
-    duration_label.grid(row=7, column=0, sticky=tk.W)
-    duration_var = tk.StringVar(value="Medium-term")
-    short_term = ttk.Radiobutton(frame, text="Short-term (<1 month)", variable=duration_var, value="Short-term")
-    medium_term = ttk.Radiobutton(frame, text="Medium-term (6 months - 1 year)", variable=duration_var, value="Medium-term")
-    long_term = ttk.Radiobutton(frame, text="Long-term (1-3 years)", variable=duration_var, value="Long-term")
-    short_term.grid(row=8, column=0, sticky=tk.W)
-    medium_term.grid(row=8, column=1, sticky=tk.W)
-    long_term.grid(row=8, column=2, sticky=tk.W)
-    
-    insider_text = tk.Text(frame, height=5, width=60)
-    insider_text.insert(tk.END, f"Insider Trades: {insider_trades[:500]}... (truncated)")
-    insider_text.grid(row=9, column=0, columnspan=2, pady=5)
-    
-    ai_text = tk.Text(frame, height=10, width=60)
-    ai_text.insert(tk.END, f"AI Analysis: {ai_analysis}")
-    ai_text.grid(row=10, column=0, columnspan=2, pady=5)
-    
-    ttk.Button(frame, text="Close", command=root.destroy).grid(row=11, column=0, columnspan=2, pady=10)
-    
-    root.mainloop()
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-
-
-def scan_stocks():
-    """Continuously scan the stock market and identify investment opportunities."""
-    tickers = ["AAPL", "TSLA", "NVDA", "AMZN", "GOOGL"]  # Expand with more tickers
-    medium = "Medium Risk - 60% safe investments, 40% risky investments with moderate returns"
-    lowrisk = "Low Risk - 80% safe investments, 20% risky investments with potential returns"
-    highrisk = "High Risk  - 40% safe investments, 60% risky investments with big potential returns"
-    shortterm = "Short-term - 1 month or less"
-    mediumterm = "Medium-term - 6 months to 1 year"
-    longterm = "Long-term - 1 to 3 years"
+@app.route('/analyze', methods=['GET', 'POST'])
+def analyze():
+    """Handle stock analysis request."""
+    ticker = request.args.get("ticker")  # Get ticker from URL parameters
+    risk_level = "Medium Risk - 60% safe investments, 40% risky investments with moderate returns"
+    investment_duration = "Medium-term - 6 months to 1 year"
     age = "19"
+
+    if not ticker:
+        return jsonify({"error": "No ticker symbol provided."}), 400
+    
+    fund_data = get_fundamental_data(ticker)
+    insider_trades = get_insider_trading(ticker)
+           
+   # ✅ Fetch stock data
+    stock_data = get_stock_data(ticker)
+    if not stock_data or not stock_data['history']:
+        return jsonify({"error": "No stock data available."}), 400
+
+    # ✅ Extract relevant stock indicators
+    one_year_data = stock_data['history'].get('1y', pd.DataFrame())
+    if one_year_data.empty:
+        return jsonify({"error": "No 1-year stock data available."}), 400
+
+    rsi = calculate_rsi(one_year_data)
+    macd, signal = calculate_macd(one_year_data)
+
+    news_sentiment = get_news_sentiment(ticker)
+    analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, fund_data, stock_data['SMA_50'], stock_data['SMA_200'])
+
+    return jsonify({
+        "ticker": ticker,
+        "rsi": rsi.iloc[-1] if not rsi.empty else None,
+        "macd": macd.iloc[-1] if not macd.empty else None,
+        "signal": signal.iloc[-1] if not signal.empty else None,
+        "insider_trades": insider_trades,
+        "fund_data": fund_data,
+        "sma_50": stock_data['SMA_50'],
+        "sma_200": stock_data['SMA_200'],
+        "news_sentiment": news_sentiment,
+        "analysis": analysis
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+# def scan_stocks():
+#     """Continuously scan the stock market and identify investment opportunities."""
+#     tickers = ["AAPL", "TSLA", "NVDA", "AMZN", "GOOGL"]  # Expand with more tickers
+#     medium = "Medium Risk - 60% safe investments, 40% risky investments with moderate returns"
+#     lowrisk = "Low Risk - 80% safe investments, 20% risky investments with potential returns"
+#     highrisk = "High Risk  - 40% safe investments, 60% risky investments with big potential returns"
+#     shortterm = "Short-term - 1 month or less"
+#     mediumterm = "Medium-term - 6 months to 1 year"
+#     longterm = "Long-term - 1 to 3 years"
+#     age = "19"
     
     
-    while True:
-        for ticker in tickers:
-            print(f"Scanning {ticker}...")
-            data = get_stock_data(ticker)  # Now returns a dictionary
+#     while True:
+#         for ticker in tickers:
+#             print(f"Scanning {ticker}...")
+#             data = get_stock_data(ticker)  # Now returns a dictionary
             
-            if '1mo' not in data or data['1mo'].empty:
-                print(f"Warning: No data found for {ticker} in 1mo timeframe.")
-                continue  # Skip this ticker
+#             if '1mo' not in data or data['1mo'].empty:
+#                 print(f"Warning: No data found for {ticker} in 1mo timeframe.")
+#                 continue  # Skip this ticker
             
-            # Now safely access '1mo' data
-            rsi = calculate_rsi(data['1mo'])
-            macd, signal = calculate_macd(data['1mo'])
+#             # Now safely access '1mo' data
+#             rsi = calculate_rsi(data['1mo'])
+#             macd, signal = calculate_macd(data['1mo'])
 
-            insider_trades = get_insider_trading(ticker)
-            news_sentiment = get_news_sentiment(ticker)
+#             insider_trades = get_insider_trading(ticker)
+#             news_sentiment = get_news_sentiment(ticker)
+#             fund_data = get_fundamental_data(ticker)
             
-            # Set default risk level and investment duration (change as needed)
-            risk_level = medium # Default to medium risk
-            investment_duration = mediumterm # Default to short-term
+#             # Set default risk level and investment duration (change as needed)
+#             risk_level = medium # Default to medium risk
+#             investment_duration = mediumterm # Default to short-term
 
-            ai_analysis = analyze_with_ollama(
-                ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age
-            )
+#             ai_analysis = analyze_with_ollama(
+#                 ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, fund_data
+#             )
             
-            print(f"AI Analysis for {ticker}: {ai_analysis}")
+#             print(f"AI Analysis for {ticker}: {ai_analysis}")
             
-            # Show dashboard for the first scanned stock (optional)
-            show_dashboard(ticker, rsi, macd, signal, insider_trades, news_sentiment, ai_analysis)
+#             # Show dashboard for the first scanned stock (optional)
+#             show_dashboard(ticker, rsi, macd, signal, insider_trades, news_sentiment, ai_analysis)
 
-        print("Sleeping for 1 hour before next scan...")
-        time.sleep(3600)  # Scan every hour
+#         print("Sleeping for 1 hour before next scan...")
+#         time.sleep(3600)  # Scan every hour
 
 
-if __name__ == "__main__":
-    scan_stocks()
+# if __name__ == "__main__":
+#     scan_stocks()
