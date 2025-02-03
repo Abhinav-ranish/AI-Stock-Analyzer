@@ -12,6 +12,19 @@ import time
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
+import faiss
+from sentence_transformers import SentenceTransformer
+
+# Load Sentence Transformer for embedding generation
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# Initialize FAISS index
+dimension = 384  # Must match SentenceTransformer output size
+index = faiss.IndexFlatL2(dimension)
+
+# Store stock metadata
+stock_data_store = {}
+
 
 load_dotenv()  # Load environment variables from .env file
 NEWS_API_KEY = os.getenv("NEWSAPI_KEY")
@@ -73,8 +86,9 @@ def calculate_macd(data):
     signal = macd.ewm(span=9, adjust=False).mean()
     return macd, signal
 
+
 def get_insider_trading(ticker):
-    """Fetch and parse insider trading data from OpenInsider."""
+    """Fetch and parse insider trading data from OpenInsider with correct formatting."""
     url = f"http://openinsider.com/screener?s={ticker}"
     
     headers = {
@@ -95,33 +109,31 @@ def get_insider_trading(ticker):
         
         # Extract table rows
         rows = table.find_all("tr")[1:]  # Skip header row
-        
+
         trades = []
         for row in rows:
             cols = row.find_all("td")
-            if len(cols) < 10:  # Ensure it has enough columns
+            if len(cols) < 11:  # Ensure there are enough columns
                 continue
-            
+
             trade_info = {
-                "Filing Date": cols[0].text.strip(),
-                "Trade Date": cols[1].text.strip(),
-                "Ticker": cols[2].text.strip(),
-                "Insider Name": cols[3].text.strip(),
-                "Title": cols[4].text.strip(),
-                "Trade Type": cols[5].text.strip(),
-                "Price": cols[6].text.strip(),
-                "Quantity": cols[7].text.strip(),
-                "Owned After": cols[8].text.strip(),
-                "Value": cols[9].text.strip()
+                "Filing Date": cols[1].text.strip(),
+                "Trade Date": cols[2].text.strip(),
+                "Ticker": cols[3].text.strip(),
+                "Insider Name": cols[4].text.strip(),
+                "Title": cols[5].text.strip(),
+                "Trade Type": cols[6].text.strip(),
+                "Price": cols[7].text.strip(),
+                "Quantity": cols[8].text.strip(),
+                "Value": cols[10].text.strip(),
             }
             trades.append(trade_info)
-        
+
         return trades
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching insider trading data: {e}")
         return None
-
 
 def get_news_sentiment(ticker):
     """Fetch recent news and analyze sentiment."""
@@ -139,11 +151,12 @@ def get_news_sentiment(ticker):
     return None
 
 def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, sma_50, sma_200):
-    """Use Ollama AI to analyze stock data and provide insights in a concise format."""
+    """Use RAG-enhanced stock data before sending it to Ollama AI."""
+    similar_stocks = retrieve_similar_stocks(ticker)
     last_rsi = rsi.iloc[-1] if not rsi.empty else "N/A"
     last_macd = macd.iloc[-1] if not macd.empty else "N/A"
     last_signal = signal.iloc[-1] if not signal.empty else "N/A"
-
+# - Similar Stocks (for reference): {', '.join(similar_stocks) if similar_stocks else 'N/A'}
     prompt = f"""
     Analyze the stock {ticker} with the following data:
 
@@ -171,13 +184,55 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentimen
     **Investment:** <Buy/Sell/Hold>
     """
     
-    response = ollama.chat(model='llama3.2:latest', messages=[{"role": "user", "content": prompt}])
+    response = ollama.chat(model='llama3.2:latest', messages=[{"role": "user", "content": prompt}], options={"num_gpu_layers": 10})
     return response["message"]["content"]
 
+def store_stock_data(ticker, stock_data):
+    """Store stock data embeddings in FAISS for similarity-based retrieval."""
+    if not stock_data:
+        return
+    
+    # Create a description for embedding
+    description = f"""
+    Stock {ticker} RSI {stock_data['RSI']}, MACD {stock_data['MACD']}, 
+    SMA-200 {stock_data['SMA_200']},PE Ratio {stock_data.get('pe_ratio', 'N/A')}
+    """
+    
+    # Generate embedding
+    vector = model.encode([description])[0]
+    
+    # Ensure FAISS index is properly initialized
+    global index  
+    if not isinstance(index, faiss.IndexFlatL2):  # ✅ Check FAISS instance type
+        print("⚠️ FAISS Index is not initialized properly! Re-initializing...")
+        index = faiss.IndexFlatL2(384)  # Re-initialize
+    
+    # Store embedding in FAISS
+    index.add(np.array([vector]))  # ✅ Now index.add() should work correctly
+    
+    # Store ticker metadata
+    stock_data_store[ticker] = description
+
+
+def retrieve_similar_stocks(ticker):
+    """Retrieve most similar stocks based on stored FAISS embeddings."""
+    if ticker not in stock_data_store:
+        return None
+    
+    # Generate query vector
+    query_vector = model.encode([stock_data_store[ticker]])[0]
+    
+    # Search in FAISS for most similar stocks
+    distances, indices = index.search(np.array([query_vector]), k=3)  # Retrieve top 3 matches
+    
+    similar_tickers = [
+        list(stock_data_store.keys())[i]
+        for i in indices[0] if i < len(stock_data_store)
+    ]
+    
+    return similar_tickers
 
 @app.route('/')
-def index():
-    return render_template('index.html')
 
 @app.route('/analyze', methods=['GET', 'POST'])
 def analyze():
@@ -197,7 +252,7 @@ def analyze():
     earnings_growth = fund_data['earnings_growth']
     revenue_growth = fund_data['revenue_growth']
     insider_trades = get_insider_trading(ticker)
-           
+    print(ticker + "" + fund_data)       
    # ✅ Fetch stock data
     stock_data = get_stock_data(ticker)
     if not stock_data or not stock_data['history']:
@@ -212,6 +267,14 @@ def analyze():
     macd, signal = calculate_macd(one_year_data)
 
     news_sentiment = get_news_sentiment(ticker)
+    # ✅ Store stock data in FAISS for retrieval
+    store_stock_data(ticker, {
+        "RSI": rsi.iloc[-1] if not rsi.empty else None,
+        "MACD": macd.iloc[-1] if not macd.empty else None,
+        "SMA_200": stock_data['SMA_200'],
+        "pe_ratio": fund_data['pe_ratio']
+    })
+
     analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, stock_data['SMA_50'], stock_data['SMA_200'])
 
     return jsonify({
@@ -227,7 +290,8 @@ def analyze():
         "sma_50": stock_data['SMA_50'],
         "sma_200": stock_data['SMA_200'],
         "news_sentiment": news_sentiment,
-        "analysis": analysis
+        "analysis": analysis,
+        "similar_stocks": retrieve_similar_stocks(ticker)
     })
 
 if __name__ == '__main__':
