@@ -57,7 +57,7 @@ def calculate_rsi(data, period=14):
 def get_fundamental_data(ticker):
     stock = yf.Ticker(ticker)
     info = stock.info
-    
+        
     return {
         'pe_ratio': info.get('trailingPE'),
         'ps_ratio': info.get('priceToSalesTrailing12Months'),
@@ -138,39 +138,39 @@ def get_news_sentiment(ticker):
         return avg_sentiment
     return None
 
-def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, fund_data, sma_50, sma_200):
-    """Use Ollama AI to analyze stock data and provide insights based on selected checkboxes."""
+def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, sma_50, sma_200):
+    """Use Ollama AI to analyze stock data and provide insights in a concise format."""
     last_rsi = rsi.iloc[-1] if not rsi.empty else "N/A"
     last_macd = macd.iloc[-1] if not macd.empty else "N/A"
     last_signal = signal.iloc[-1] if not signal.empty else "N/A"
-    
+
     prompt = f"""
-    Analyze the following stock data for {ticker}:
-    RSI: {last_rsi}
-    50-day SMA: {sma_50}
-    200-day SMA: {sma_200}
-    MACD: {last_macd}, Signal: {last_signal}
-    Fundatmental Data: {fund_data}
-    Insider Trades: {insider_trades[:500]}... (truncated)
-    News Sentiment: {news_sentiment}
-    Investing Amount: 100$
+    Analyze the stock {ticker} with the following data:
 
-    Consider the following investor preferences:
-    Risk Level: {risk_level}
-    Age: {age} years. Lower the age increase the risk tolerance because more time to recover.
-    Investment Duration: {investment_duration}
+    - RSI: {round(last_rsi, 2)}
+    - PE Ratio: {peratio} Very Important. If high, stock is overvalued. If low, stock is undervalued.
+    - PS Ratio: {psratio}
+    - Earnings Growth: {earnings_growth}
+    - Revenue Growth: {revenue_growth}
+    - 50-day SMA: {round(sma_50, 2) if sma_50 else 'N/A'}, 200-day SMA: {round(sma_200, 2) if sma_200 else 'N/A'}
+    - MACD: {round(last_macd, 2)}, Signal: {round(last_signal, 2)}
+    - Insider Trades: {insider_trades} IF huge sell off, it is a bearish signal. Dont Recommend buying. If huge buy, it is a bullish signal. Recommend buying.
+    - News Sentiment: {news_sentiment} IF positive, it is a bullish signal. Recommend buying. If negative, it is a bearish signal. Dont Recommend buying.
     
-    Based on this information, predict the stock's short-term trend.
-    Print out the PE ratio then a Confidence percentage of the prediction. 
-    Base your reasoning by past performance insider trading and news sentiments. Strongly consider insider trading if there is a Purchase of over 150k$. If there is too many sales then it is a red flag.
+    Investor Profile:
+    - Risk Level: {risk_level}
+    - Age: {age} years
+    - Investment Duration: {investment_duration}
 
-    Example Output Format:
-    PE Ratio: 20
-    Confidence: 80%
-    Reasoning: The stock has a low PE ratio and strong insider buying, indicating a potential uptrend.
-    News sentiment is positive, and the MACD is crossing above the signal line.
-    Amount of investment: 100$
+    **Provide a short, structured response with the following format:**
+    
+    **PE Ratio:** {peratio}
+    **Confidence:** <value>%  
+    **Prediction:** (Uptrend/Downtrend/Neutral)  
+    **Reasoning:** <Brief explanation in 2-3 sentences>  
+    **Investment:** <Buy/Sell/Hold>
     """
+    
     response = ollama.chat(model='llama3.2:latest', messages=[{"role": "user", "content": prompt}])
     return response["message"]["content"]
 
@@ -183,7 +183,7 @@ def index():
 def analyze():
     """Handle stock analysis request."""
     ticker = request.args.get("ticker")  # Get ticker from URL parameters
-    risk_level = "Medium Risk - 60% safe investments, 40% risky investments with moderate returns"
+    risk_level = "Low Risk - 80% safe investments, 20% risky investments"
     investment_duration = "Medium-term - 6 months to 1 year"
     age = "19"
 
@@ -191,6 +191,11 @@ def analyze():
         return jsonify({"error": "No ticker symbol provided."}), 400
     
     fund_data = get_fundamental_data(ticker)
+    peratio = fund_data['pe_ratio']
+    print(peratio)
+    psratio = fund_data['ps_ratio']
+    earnings_growth = fund_data['earnings_growth']
+    revenue_growth = fund_data['revenue_growth']
     insider_trades = get_insider_trading(ticker)
            
    # ✅ Fetch stock data
@@ -207,7 +212,7 @@ def analyze():
     macd, signal = calculate_macd(one_year_data)
 
     news_sentiment = get_news_sentiment(ticker)
-    analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, fund_data, stock_data['SMA_50'], stock_data['SMA_200'])
+    analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, stock_data['SMA_50'], stock_data['SMA_200'])
 
     return jsonify({
         "ticker": ticker,
@@ -215,7 +220,10 @@ def analyze():
         "macd": macd.iloc[-1] if not macd.empty else None,
         "signal": signal.iloc[-1] if not signal.empty else None,
         "insider_trades": insider_trades,
-        "fund_data": fund_data,
+        "pe_ratio": peratio,
+        "ps_ratio": psratio,
+        "earnings_growth": earnings_growth,
+        "revenue_growth": revenue_growth,
         "sma_50": stock_data['SMA_50'],
         "sma_200": stock_data['SMA_200'],
         "news_sentiment": news_sentiment,
