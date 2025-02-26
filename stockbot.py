@@ -2,9 +2,8 @@ import requests
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from tkinter import ttk
 from textblob import TextBlob
 from sklearn.linear_model import LinearRegression
 import ollama
@@ -20,10 +19,31 @@ model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Initialize FAISS index
 dimension = 384  # Must match SentenceTransformer output size
-index = faiss.IndexFlatL2(dimension)
 
 # Store stock metadata
-stock_data_store = {}
+# Initialize your vector store with the appropriate dimension
+
+class VectorStore:
+    def __init__(self, dimension):
+        self.dimension = dimension
+        self.index = faiss.IndexFlatL2(dimension)
+        self.metadata = []  # List to store metadata (e.g., ticker, description)
+
+    def add_vector(self, vector, meta):
+        # vector: np.array of shape (dimension,)
+        # meta: a dictionary containing metadata
+        self.index.add(np.array([vector]))
+        self.metadata.append(meta)
+
+    def search(self, query_vector, k=3):
+        distances, indices = self.index.search(np.array([query_vector]), k)
+        results = []
+        for idx in indices[0]:
+            if idx < len(self.metadata):
+                results.append(self.metadata[idx])
+        return results
+
+vector_store = VectorStore(dimension=384)
 
 
 load_dotenv()  # Load environment variables from .env file
@@ -31,6 +51,7 @@ NEWS_API_KEY = os.getenv("NEWSAPI_KEY")
 
 app = Flask(__name__)
 CORS(app)
+
 
 def get_stock_data(ticker):
     stock = yf.Ticker(ticker)
@@ -135,46 +156,100 @@ def get_insider_trading(ticker):
         print(f"Error fetching insider trading data: {e}")
         return None
 
-def get_news_sentiment(ticker):
-    """Fetch recent news and analyze sentiment."""
-    # Use the News API to fetch news articles. Get your API from https://newsapi.org/
-    news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&apiKey={NEWS_API_KEY}"
+def get_news_analysis(ticker):
+    """Fetch recent news articles for the given ticker, count sentiment polarity, and return top stories."""
+    # Define a list of reputable sources (update this list as needed)
+    reputable_sources = {"Reuters", "Bloomberg", "BBC News", "The New York Times", "Financial Times"}
+
+    news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&apiKey={NEWS_API_KEY}&language=en"
     response = requests.get(news_api_url)
+    sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
+    top_stories = []
+
     if response.status_code == 200:
         articles = response.json().get('articles', [])
-        sentiments = []
-        for article in articles[:5]:  # Analyze the first 5 articles
-            sentiment = TextBlob(article['title']).sentiment.polarity
-            sentiments.append(sentiment)
-        avg_sentiment = np.mean(sentiments) if sentiments else 0
-        return avg_sentiment
-    return None
+        analyzed_articles = []
 
-def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, sma_50, sma_200):
+        for article in articles:
+            title = article.get('title', '')
+            # Use TextBlob to analyze the title sentiment
+            polarity = TextBlob(title).sentiment.polarity
+
+            # Set thresholds; you can tweak these as needed
+            if polarity > 0.1:
+                sentiment_counts["positive"] += 1
+                sentiment = "positive"
+            elif polarity < -0.1:
+                sentiment_counts["negative"] += 1
+                sentiment = "negative"
+            else:
+                sentiment_counts["neutral"] += 1
+                sentiment = "neutral"
+
+            # Add article info for further processing
+            analyzed_articles.append({
+                "title": title,
+                "url": article.get("url"),
+                "source": article.get("source", {}).get("name", "Unknown"),
+                "description": article.get("description", ""),
+                "publishedAt": article.get("publishedAt", ""),
+                "sentiment": sentiment,
+                "polarity": polarity
+            })
+
+        # Filter for top stories from reputable sources if available
+        reputable_articles = [a for a in analyzed_articles if a["source"] in reputable_sources]
+        # Fallback: if none from reputable sources, use all articles
+        articles_to_consider = reputable_articles if reputable_articles else analyzed_articles
+        # Sort by published date (descending) and pick top 5
+        articles_to_consider.sort(key=lambda x: x["publishedAt"], reverse=True)
+        top_stories = articles_to_consider[:5]
+
+    return {
+        "sentiment_counts": sentiment_counts,
+        "top_stories": top_stories
+    }
+
+def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_analysis, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, sma_50, sma_200):
     """Use RAG-enhanced stock data before sending it to Ollama AI."""
     similar_stocks = retrieve_similar_stocks(ticker)
     last_rsi = rsi.iloc[-1] if not rsi.empty else "N/A"
     last_macd = macd.iloc[-1] if not macd.empty else "N/A"
     last_signal = signal.iloc[-1] if not signal.empty else "N/A"
-# - Similar Stocks (for reference): {', '.join(similar_stocks) if similar_stocks else 'N/A'}
+    
+    # Prepare news sentiment information from the news_analysis dict
+    sentiment_counts = news_analysis.get("sentiment_counts", {"positive": 0, "negative": 0, "neutral": 0})
+    top_stories = news_analysis.get("top_stories", [])
+    
+    # Format the top stories for the prompt
+    top_stories_formatted = "\n".join(
+        [f"{i+1}. {story['title']} ({story['source']}) - {story['url']}" for i, story in enumerate(top_stories)]
+    )
+    
     prompt = f"""
     Analyze the stock {ticker} with the following data:
 
     - RSI: {round(last_rsi, 2)}
-    - PE Ratio: {peratio} Very Important. If high, stock is overvalued. If low, stock is undervalued.
+    - PE Ratio: {peratio}  (Important: High values may indicate overvaluation while low values may indicate undervaluation.)
     - PS Ratio: {psratio}
     - Earnings Growth: {earnings_growth}
     - Revenue Growth: {revenue_growth}
     - 50-day SMA: {round(sma_50, 2) if sma_50 else 'N/A'}, 200-day SMA: {round(sma_200, 2) if sma_200 else 'N/A'}
     - MACD: {round(last_macd, 2)}, Signal: {round(last_signal, 2)}
-    - Insider Trades: {insider_trades} IF huge sell off, it is a bearish signal. Dont Recommend buying. If huge buy, it is a bullish signal. Recommend buying.
-    - News Sentiment: {news_sentiment} IF positive, it is a bullish signal. Recommend buying. If negative, it is a bearish signal. Dont Recommend buying.
+    - Insider Trades: {insider_trades} (Large sell-offs are bearish; large buys are bullish.)
     
-    Investor Profile:
+    News Analysis:
+    - Sentiment Counts: Positive: {sentiment_counts.get('positive', 0)}, Negative: {sentiment_counts.get('negative', 0)}, Neutral: {sentiment_counts.get('neutral', 0)}
+    - Top Stories:
+    {top_stories_formatted if top_stories_formatted else 'N/A'}
+    
+    My Investor Profile:
     - Risk Level: {risk_level}
     - Age: {age} years
     - Investment Duration: {investment_duration}
-
+    
+    Similar Stocks for reference: {', '.join(similar_stocks) if similar_stocks else 'N/A'}
+    
     **Provide a short, structured response with the following format:**
     
     **PE Ratio:** {peratio}
@@ -188,49 +263,42 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentimen
     return response["message"]["content"]
 
 def store_stock_data(ticker, stock_data):
-    """Store stock data embeddings in FAISS for similarity-based retrieval."""
+    """Store stock data embeddings in the vector store for similarity-based retrieval."""
     if not stock_data:
         return
     
-    # Create a description for embedding
-    description = f"""
-    Stock {ticker} RSI {stock_data['RSI']}, MACD {stock_data['MACD']}, 
-    SMA-200 {stock_data['SMA_200']},PE Ratio {stock_data.get('pe_ratio', 'N/A')}
-    """
+    description = f"Ticker: {ticker}, RSI: {stock_data['RSI']}, MACD: {stock_data['MACD']}, SMA-200: {stock_data['SMA_200']}, PE Ratio: {stock_data.get('pe_ratio', 'N/A')}"
     
-    # Generate embedding
+    # Generate embedding using the SentenceTransformer model
     vector = model.encode([description])[0]
     
-    # Ensure FAISS index is properly initialized
-    global index  
-    if not isinstance(index, faiss.IndexFlatL2):  # ✅ Check FAISS instance type
-        print("⚠️ FAISS Index is not initialized properly! Re-initializing...")
-        index = faiss.IndexFlatL2(384)  # Re-initialize
-    
-    # Store embedding in FAISS
-    index.add(np.array([vector]))  # ✅ Now index.add() should work correctly
-    
-    # Store ticker metadata
-    stock_data_store[ticker] = description
+    # Store the vector and its associated metadata in the vector store
+    meta = {
+        "ticker": ticker,
+        "description": description,
+        "RSI": stock_data['RSI'],
+        "MACD": stock_data['MACD'],
+        "SMA_200": stock_data['SMA_200'],
+        "pe_ratio": stock_data.get('pe_ratio', None)
+    }
+    vector_store.add_vector(vector, meta)
+
 
 
 def retrieve_similar_stocks(ticker):
-    """Retrieve most similar stocks based on stored FAISS embeddings."""
-    if ticker not in stock_data_store:
+    """Retrieve similar stocks based on stored vector embeddings."""
+    # First, retrieve the metadata for the given ticker to form the query
+    meta = next((m for m in vector_store.metadata if m["ticker"] == ticker), None)
+    if not meta:
         return None
+
+    query_vector = model.encode([meta["description"]])[0]
+    results = vector_store.search(query_vector, k=3)
     
-    # Generate query vector
-    query_vector = model.encode([stock_data_store[ticker]])[0]
-    
-    # Search in FAISS for most similar stocks
-    distances, indices = index.search(np.array([query_vector]), k=3)  # Retrieve top 3 matches
-    
-    similar_tickers = [
-        list(stock_data_store.keys())[i]
-        for i in indices[0] if i < len(stock_data_store)
-    ]
-    
+    # Exclude the queried ticker from the results if necessary
+    similar_tickers = [res["ticker"] for res in results if res["ticker"] != ticker]
     return similar_tickers
+
 
 @app.route('/')
 
@@ -252,7 +320,7 @@ def analyze():
     earnings_growth = fund_data['earnings_growth']
     revenue_growth = fund_data['revenue_growth']
     insider_trades = get_insider_trading(ticker)
-    print(ticker + "" + fund_data)       
+    print(ticker + " " + str(fund_data))
    # ✅ Fetch stock data
     stock_data = get_stock_data(ticker)
     if not stock_data or not stock_data['history']:
@@ -266,7 +334,9 @@ def analyze():
     rsi = calculate_rsi(one_year_data)
     macd, signal = calculate_macd(one_year_data)
 
-    news_sentiment = get_news_sentiment(ticker)
+    news_data = get_news_analysis(ticker)
+    news_sentiment_counts = news_data["sentiment_counts"]
+    top_stories = news_data["top_stories"]
     # ✅ Store stock data in FAISS for retrieval
     store_stock_data(ticker, {
         "RSI": rsi.iloc[-1] if not rsi.empty else None,
@@ -274,8 +344,8 @@ def analyze():
         "SMA_200": stock_data['SMA_200'],
         "pe_ratio": fund_data['pe_ratio']
     })
-
-    analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, stock_data['SMA_50'], stock_data['SMA_200'])
+    print("News Data: ", news_data)
+    analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_data, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, stock_data['SMA_50'], stock_data['SMA_200'])
 
     return jsonify({
         "ticker": ticker,
@@ -289,7 +359,8 @@ def analyze():
         "revenue_growth": revenue_growth,
         "sma_50": stock_data['SMA_50'],
         "sma_200": stock_data['SMA_200'],
-        "news_sentiment": news_sentiment,
+        "news_sentiment": news_sentiment_counts,
+        "top_stories": top_stories,
         "analysis": analysis,
         "similar_stocks": retrieve_similar_stocks(ticker)
     })
@@ -297,53 +368,3 @@ def analyze():
 if __name__ == '__main__':
     app.run(debug=True)
 
-
-
-# def scan_stocks():
-#     """Continuously scan the stock market and identify investment opportunities."""
-#     tickers = ["AAPL", "TSLA", "NVDA", "AMZN", "GOOGL"]  # Expand with more tickers
-#     medium = "Medium Risk - 60% safe investments, 40% risky investments with moderate returns"
-#     lowrisk = "Low Risk - 80% safe investments, 20% risky investments with potential returns"
-#     highrisk = "High Risk  - 40% safe investments, 60% risky investments with big potential returns"
-#     shortterm = "Short-term - 1 month or less"
-#     mediumterm = "Medium-term - 6 months to 1 year"
-#     longterm = "Long-term - 1 to 3 years"
-#     age = "19"
-    
-    
-#     while True:
-#         for ticker in tickers:
-#             print(f"Scanning {ticker}...")
-#             data = get_stock_data(ticker)  # Now returns a dictionary
-            
-#             if '1mo' not in data or data['1mo'].empty:
-#                 print(f"Warning: No data found for {ticker} in 1mo timeframe.")
-#                 continue  # Skip this ticker
-            
-#             # Now safely access '1mo' data
-#             rsi = calculate_rsi(data['1mo'])
-#             macd, signal = calculate_macd(data['1mo'])
-
-#             insider_trades = get_insider_trading(ticker)
-#             news_sentiment = get_news_sentiment(ticker)
-#             fund_data = get_fundamental_data(ticker)
-            
-#             # Set default risk level and investment duration (change as needed)
-#             risk_level = medium # Default to medium risk
-#             investment_duration = mediumterm # Default to short-term
-
-#             ai_analysis = analyze_with_ollama(
-#                 ticker, rsi, macd, signal, insider_trades, news_sentiment, risk_level, investment_duration, age, fund_data
-#             )
-            
-#             print(f"AI Analysis for {ticker}: {ai_analysis}")
-            
-#             # Show dashboard for the first scanned stock (optional)
-#             show_dashboard(ticker, rsi, macd, signal, insider_trades, news_sentiment, ai_analysis)
-
-#         print("Sleeping for 1 hour before next scan...")
-#         time.sleep(3600)  # Scan every hour
-
-
-# if __name__ == "__main__":
-#     scan_stocks()

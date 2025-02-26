@@ -1,0 +1,120 @@
+/* Overall page container with a gradient background */
+.app-container {
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #f0f9ff, #cbebff);
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Top navigation / links */
+  .top-links {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.5);
+  }
+  
+  .top-links a {
+    margin-right: 10px;
+    text-decoration: none;
+    color: #0077cc;
+    font-weight: 500;
+  }
+  
+  .top-links a:hover {
+    text-decoration: underline;
+  }
+  
+  .links-left,
+  .links-right {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Main container */
+  .main {
+    margin: 0 auto;
+    max-width: 1200px;
+    padding: 16px;
+  }
+  
+  /* Title */
+  .title {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  /* Search bar */
+  .search-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .ticker-input {
+    flex: 1;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  
+  .analyze-button {
+    padding: 8px 16px;
+    background-color: #0077cc;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  .analyze-button:hover {
+    background-color: #005fa3;
+  }
+  
+  /* Two-column layout */
+  .row {
+    display: flex;
+    flex-wrap: wrap; /* to handle small screens gracefully */
+    gap: 16px;
+  }
+  
+  .col-left {
+    flex: 0 0 30%;
+    max-width: 30%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .col-right {
+    flex: 1; /* Takes remaining space */
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Card styling */
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  }
+  
+  .analysis-text {
+    white-space: pre-line;
+  }
+  
+  /* Make the TradingView card fill remaining vertical space */
+  .full-height {
+    height: 100%;
+  }
+  
+  /* Responsive adjustments for screens under 768px */
+  @media (max-width: 768px) {
+    .col-left,
+    .col-right {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+  }
+  

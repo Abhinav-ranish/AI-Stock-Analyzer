@@ -65,7 +65,7 @@ The system comes with a **modern web interface** built with **React**, allowing 
 
 4. **Install Frontend Dependencies**:
    ```sh
-   cd frontend
+   cd stock-analyzer-web
    npm install
    ```
 
@@ -85,12 +85,12 @@ The system comes with a **modern web interface** built with **React**, allowing 
 ### **Run the Frontend**
 2. **Start the React web interface**:
    ```sh
-   cd frontend
+   cd stock-analyzer-web
    npm start
    ```
    The frontend will be available at:
    ```
-   http://localhost:3000
+   http://127.0.0.1:3000
    ```
 
 ---
