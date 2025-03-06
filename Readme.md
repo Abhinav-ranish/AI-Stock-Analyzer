@@ -6,6 +6,15 @@ Stock AI Bot is a **Retrieval-Augmented Generation (RAG) powered AI system** tha
 The system comes with a **modern web interface** built with **React**, allowing users to input stock tickers and get AI-powered analysis **directly in their browser**.
 
 ---
+## ⚠️ **Disclaimer – Use at Your Own Risk**  
+This AI-powered stock analysis tool is for **informational and educational purposes only**. It does **not constitute financial advice** and should **not** be relied upon for making investment decisions.  
+
+- **No Guarantees:** Stock market investments are inherently risky. The AI-generated insights, predictions, and recommendations may be inaccurate or outdated.  
+- **Not a Financial Advisor:** This tool is not a registered financial advisor, brokerage, or investment service.  
+- **Your Responsibility:** You are solely responsible for your own financial decisions. **The developers and contributors assume no liability for any financial losses or damages incurred from using this tool.**  
+
+🚨 **Always conduct your own research, consult with a qualified financial advisor, and make investment decisions at your own discretion.**  
+
 
 ## **Features**
 ✅ **Retrieves Historical Stock Data** – Fetches stock price history for **7 days, 1 month, 3 months, 6 months, 1 year, and 5 years** via **Yahoo Finance**.  
