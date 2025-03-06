@@ -1,11 +1,5 @@
 # **Stock AI Bot - README**
 
-## **Overview**
-Stock AI Bot is a **Retrieval-Augmented Generation (RAG) powered AI system** that analyzes **stock market data, trends, insider trading activity, and news sentiment** to provide smart investment insights. It leverages **Yahoo Finance, OpenInsider, FAISS vector database, and AI analysis (Ollama LLM)** to identify **undervalued stocks** and provide **buy/sell recommendations**.
-
-The system comes with a **modern web interface** built with **React**, allowing users to input stock tickers and get AI-powered analysis **directly in their browser**.
-
----
 ## ⚠️ **Disclaimer – Use at Your Own Risk**  
 This AI-powered stock analysis tool is for **informational and educational purposes only**. It does **not constitute financial advice** and should **not** be relied upon for making investment decisions.  
 
@@ -15,6 +9,12 @@ This AI-powered stock analysis tool is for **informational and educational purpo
 
 🚨 **Always conduct your own research, consult with a qualified financial advisor, and make investment decisions at your own discretion.**  
 
+## **Overview**
+Stock AI Bot is a **Retrieval-Augmented Generation (RAG) powered AI system** that analyzes **stock market data, trends, insider trading activity, and news sentiment** to provide smart investment insights. It leverages **Yahoo Finance, OpenInsider, FAISS vector database, and AI analysis (Ollama LLM)** to identify **undervalued stocks** and provide **buy/sell recommendations**.
+
+The system comes with a **modern web interface** built with **React**, allowing users to input stock tickers and get AI-powered analysis **directly in their browser**.
+
+---
 
 ## **Features**
 ✅ **Retrieves Historical Stock Data** – Fetches stock price history for **7 days, 1 month, 3 months, 6 months, 1 year, and 5 years** via **Yahoo Finance**.  
