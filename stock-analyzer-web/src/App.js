@@ -87,6 +87,11 @@ export default function StockAnalyzer() {
             value={ticker}
             onChange={(e) => setTicker(e.target.value)}
             placeholder="Enter Stock Ticker"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                fetchStockData(); // Call the function when Enter is pressed
+              }
+            }}
           />
           <button className="analyze-button" onClick={fetchStockData} disabled={loading}>
             {loading ? "Loading..." : "Analyze"}
@@ -105,6 +110,7 @@ export default function StockAnalyzer() {
             {data && (
               <div className="card">
                 <h2>{data.ticker} Analysis</h2>
+                <p>Price: {data.price?.toFixed(2)}</p>
                 <p>RSI: {data.rsi?.toFixed(2)} | P/E Ratio: {data.pe_ratio?.toFixed(2)}</p>
                 <p>MACD: {data.macd?.toFixed(2)} | Signal: {data.signal?.toFixed(2)}</p>
                 <p>50-day SMA: {data.sma_50?.toFixed(2)} | 200-day SMA: {data.sma_200?.toFixed(2)}</p>

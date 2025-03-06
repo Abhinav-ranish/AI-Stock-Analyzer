@@ -93,6 +93,7 @@ def get_fundamental_data(ticker):
     info = stock.info
         
     return {
+        'price': info.get('previousClose'),
         'pe_ratio': info.get('trailingPE'),
         'ps_ratio': info.get('priceToSalesTrailing12Months'),
         'earnings_growth': info.get('earningsGrowth'),
@@ -210,7 +211,7 @@ def get_news_analysis(ticker):
         "top_stories": top_stories
     }
 
-def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_analysis, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, sma_50, sma_200):
+def analyze_with_ollama(price, ticker, rsi, macd, signal, insider_trades, news_analysis, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, sma_50, sma_200):
     """Use RAG-enhanced stock data before sending it to Ollama AI."""
     similar_stocks = retrieve_similar_stocks(ticker)
     last_rsi = rsi.iloc[-1] if not rsi.empty else "N/A"
@@ -228,7 +229,9 @@ def analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_analysis
     
     prompt = f"""
     Analyze the stock {ticker} with the following data:
-
+    
+    Stock Data:
+    - Price: {price}
     - RSI: {round(last_rsi, 2)}
     - PE Ratio: {peratio}  (Important: High values may indicate overvaluation while low values may indicate undervaluation.)
     - PS Ratio: {psratio}
@@ -274,6 +277,7 @@ def store_stock_data(ticker, stock_data):
     
     # Store the vector and its associated metadata in the vector store
     meta = {
+        "last_price": stock_data['last_price'],
         "ticker": ticker,
         "description": description,
         "RSI": stock_data['RSI'],
@@ -320,6 +324,7 @@ def analyze():
     earnings_growth = fund_data['earnings_growth']
     revenue_growth = fund_data['revenue_growth']
     insider_trades = get_insider_trading(ticker)
+    price = fund_data['price']
     print(ticker + " " + str(fund_data))
    # ✅ Fetch stock data
     stock_data = get_stock_data(ticker)
@@ -342,14 +347,16 @@ def analyze():
         "RSI": rsi.iloc[-1] if not rsi.empty else None,
         "MACD": macd.iloc[-1] if not macd.empty else None,
         "SMA_200": stock_data['SMA_200'],
-        "pe_ratio": fund_data['pe_ratio']
+        "pe_ratio": fund_data['pe_ratio'],
+        "last_price": price
     })
     print("News Data: ", news_data)
-    analysis = analyze_with_ollama(ticker, rsi, macd, signal, insider_trades, news_data, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, stock_data['SMA_50'], stock_data['SMA_200'])
+    analysis = analyze_with_ollama(price, ticker, rsi, macd, signal, insider_trades, news_data, risk_level, investment_duration, age, peratio, psratio, earnings_growth, revenue_growth, stock_data['SMA_50'], stock_data['SMA_200'])
 
     return jsonify({
         "ticker": ticker,
         "rsi": rsi.iloc[-1] if not rsi.empty else None,
+        "price": price,
         "macd": macd.iloc[-1] if not macd.empty else None,
         "signal": signal.iloc[-1] if not signal.empty else None,
         "insider_trades": insider_trades,

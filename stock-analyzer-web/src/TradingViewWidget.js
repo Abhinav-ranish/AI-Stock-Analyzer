@@ -10,8 +10,8 @@ const TradingViewWidget = ({ ticker }) => {
         new window.TradingView.widget({
           container_id: "tradingview_widget",
           width: "100%",
-          height: 500,
-          symbol: ticker+"",
+          height: 600,
+          symbol: ticker,
           interval: "D",
           timezone: "Etc/UTC",
           theme: "light",
@@ -20,17 +20,21 @@ const TradingViewWidget = ({ ticker }) => {
           toolbar_bg: "#f1f3f6",
           enable_publishing: false,
           allow_symbol_change: true,
+          studies: ["RSI@tv-basicstudies"],
+          show_popup_button: true,
+          popup_width: "1000",
+          popup_height: "650",
         });
       }
     };
     const widgetContainer = document.getElementById("tradingview_widget");
     if (widgetContainer) {
-      widgetContainer.innerHTML = ""; // Clear previous content if any
+      widgetContainer.innerHTML = "";
       widgetContainer.appendChild(script);
     }
   }, [ticker]);
 
-  return <div id="tradingview_widget" style={{ height: 500 }} />;
+  return <div id="tradingview_widget" style={{ height: "600px" }} />;
 };
 
 export default TradingViewWidget;
