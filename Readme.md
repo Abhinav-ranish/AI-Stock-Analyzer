@@ -143,4 +143,4 @@ This AI-powered stock analysis tool is for **informational and educational purpo
 
 ---
 
-🚀 **Now your AI-powered stock analyzer is smarter, retrieves real-time data, and gives AI-based investment decisions – all via a web interface!** 🚀
+🚀 **AI-powered stock analyzer is smarter, retrieves real-time data, and gives AI-based investment decisions – all via a web interface!** 🚀
