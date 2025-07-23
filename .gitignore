@@ -1,9 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/stock-analyzer-web/node_modules
-/stock-analyzer-web/.pnp
-/stock-analyzer-web/.pnp.js
+/old-stock-ui/node_modules
+/old-stock-ui/.pnp
+/old-stock-ui/.pnp.js
+/stock-analyzer/node_modules
 
 # production
 /build
