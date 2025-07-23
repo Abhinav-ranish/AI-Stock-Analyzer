@@ -85,7 +85,7 @@ export default function StockAnalyzer() {
         ...(riskProfile ? { risk_profile: riskProfile } : {}),
       });
 
-      const res = await fetch(`http://127.0.0.1:5000/analysis/?${query}`);
+      const res = await fetch(`https://api.aranish.uk/analysis/?${query}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const result = await res.json();
       setData(result);
