@@ -17,4 +17,4 @@ for bp in (prompt_bp, fund_bp, ins_bp, tech_bp, news_bp, an_bp):
     app.register_blueprint(bp)
 
 if __name__=='__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=10000, host="0.0.0.0")
