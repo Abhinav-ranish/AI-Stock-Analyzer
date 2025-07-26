@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterPage() {
   const [nickname, setNickname] = useState("");
@@ -12,15 +13,29 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  const handleRegister = () => {
+  const { register } = useAuth(); // <-- from your hook
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      router.push("/portfolio");
+    }
+  }, []);
+
+  const handleRegister = async () => {
     if (!nickname || !email) {
       toast.error("Nickname and Email are required.");
       return;
     }
 
-    toast.success("Registered successfully (stub)");
-    router.push("/");
-    // TODO: Hook into backend later
+    try {
+      await register(nickname, email, password); // actual backend call
+      toast.success("Registered successfully");
+      // Optionally redirect or perform other actions
+      router.push("/login");
+    } catch (err: any) {
+      toast.error(err.message || "Registration failed");
+    }
   };
 
   return (

@@ -1,15 +1,15 @@
-# blueprints/news.py
-
 from flask import Blueprint, request, jsonify
 import os
 import requests
 from textblob import TextBlob
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
+from pytrends.request import TrendReq
 
+pytrends = TrendReq(hl='en-US', tz=360)
 news_bp = Blueprint('news', __name__, url_prefix='/news')
 
-# define your trusted sources
+# Trusted sources and domains
 REPUTABLE_SOURCES = {
     "Reuters", "Bloomberg", "Financial Times", "BBC News", "The Wall Street Journal",
     "MarketWatch", "Barron's", "CNBC", "Seeking Alpha", "Yahoo Finance"
@@ -22,6 +22,21 @@ TRUSTED_DOMAINS = {
 
 NEWS_API_KEY = os.getenv("NEWSAPI_KEY")
 NEWS_API_URL = "https://newsapi.org/v2/everything"
+
+# Google Trends score for keyword
+def get_google_trend_score(ticker: str) -> float:
+    try:
+        kw_list = [f"{ticker} stock"]
+        pytrends.build_payload(kw_list, timeframe='now 7-d', geo='US')
+        interest = pytrends.interest_over_time()
+        if interest.empty:
+            return 0.5
+        trend_series = interest[kw_list[0]]
+        score = trend_series[-3:].mean() / 100
+        return round(min(max(score, 0), 1), 3)
+    except Exception as e:
+        print(f"[TRENDS] Failed to fetch trend for {ticker}: {e}")
+        return 0.5
 
 def is_reputable_article(source: str, url: str) -> bool:
     domain = urlparse(url).netloc.replace("www.", "")
@@ -43,10 +58,16 @@ def fetch_and_analyze_news(ticker, days_back=7):
         print("[NEWS] Status code:", resp.status_code)
         resp.raise_for_status()
         data = resp.json()
-        print("[NEWS] Raw JSON keys:", list(data.keys()))
     except Exception as e:
         print(f"[NEWS] Fetch error: {e}")
-        return {"positive": 0, "negative": 0, "neutral": 0}, []
+        return {
+            "positive": 0,
+            "negative": 0,
+            "neutral": 0,
+            "trend_score": 0.5,
+            "news_score": 0.5,
+            "combined_score": 0.5
+        }, []
 
     articles = data.get('articles', [])
     sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
@@ -88,7 +109,31 @@ def fetch_and_analyze_news(ticker, days_back=7):
     final_articles = trusted_articles if trusted_articles else fallback_articles
     final_articles.sort(key=lambda x: x["publishedAt"], reverse=True)
 
-    return sentiment_counts, final_articles[:5]
+    # Trend score from Google Trends
+    trend_score = get_google_trend_score(ticker)
+
+    # News score from sentiment
+    total = sum(sentiment_counts.values()) or 1
+    news_score = (
+        (sentiment_counts["positive"] - sentiment_counts["negative"]) / total
+    )
+    news_score = (news_score + 1) / 2  # normalize to [0, 1]
+
+    # Weighted blend: 80% trend, 20% news
+    combined_score = 0.8 * trend_score + 0.2 * news_score
+
+    # Apply negative news penalty
+    if sentiment_counts["negative"] > sentiment_counts["positive"] * 1.5:
+        combined_score *= 0.85
+
+    return {
+        "positive": sentiment_counts["positive"],
+        "negative": sentiment_counts["negative"],
+        "neutral": sentiment_counts["neutral"],
+        "trend_score": round(trend_score, 3),
+        "news_score": round(news_score, 3),
+        "combined_score": round(combined_score, 3)
+    }, final_articles[:5]
 
 @news_bp.route('/<ticker>')
 def get_filtered_news(ticker):
@@ -100,6 +145,13 @@ def get_filtered_news(ticker):
     print("NEWS_API_KEY loaded:", NEWS_API_KEY[:5] + "..." if NEWS_API_KEY else "MISSING")
 
     return jsonify({
-        "sentiment_counts": counts,
+        "sentiment_counts": {
+            "positive": counts["positive"],
+            "negative": counts["negative"],
+            "neutral": counts["neutral"]
+        },
+        "trend_score": counts["trend_score"],
+        "news_score": counts["news_score"],
+        "combined_score": counts["combined_score"],
         "top_stories": stories
     })

@@ -1,228 +1,157 @@
-# blueprints/analysis.py
-
 from flask import Blueprint, request, jsonify
-import os
 import yfinance as yf
+import numpy as np
+
 from blueprints.fundamentals import get_fundamentals as _get_fund_json
-from blueprints.insider import get_filtered_insider as _get_insider_json
-from blueprints.news import fetch_and_analyze_news
+from blueprints.insider import fetch_finnhub_insider_data as get_insider_trading
+from blueprints.sentiment import fetch_and_analyze_news
 from blueprints.technical import (
-    calculate_rsi,
-    calculate_macd,
-    get_smas,
-    trend_zone,
-    volume_spike,
-    candle_type
+    calculate_rsi, calculate_macd, get_smas,
+    trend_zone, volume_spike, candle_type,
+    calculate_volatility_index, stochastic_rsi,
+    calculate_adx, ema_crossovers
 )
-from groq import Groq
-import json
-import time
+from blueprints.peer_utils import get_cached_peers
+from blueprints.prompt_builder import build_prompt
+from blueprints.ai_summary import get_groq_analysis
+from blueprints.scorer import score_fundamentals, score_sentiment, score_technicals, score_insiders
 
-client = Groq()
-peer_cache = {}
-PEER_CACHE_TTL = 3600
+an_bp = Blueprint("analysis", __name__, url_prefix="/analysis")
 
-an_bp = Blueprint('analysis', __name__, url_prefix='/analysis')
+def sanitize(obj):
 
-def get_groq_analysis(prompt: str) -> str:
-    completion = client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-        max_completion_tokens=512,
-        top_p=1,
-        stream=False,
-    )
-    return completion.choices[0].message.content
+    if isinstance(obj, dict):
+        return {k: sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize(i) for i in obj]
+    elif isinstance(obj, (np.generic, float, int)):
+        return round(float(obj), 4)
+    elif isinstance(obj, bool):
+        return int(obj)  # convert bool to 0/1
+    elif obj is None:
+        return ""
+    return str(obj)
 
-def normalize(val, vmin, vmax):
-    if val is None:
-        return 0.5
-    return max(0, min(1, (val - vmin) / (vmax - vmin)))
 
-def generate_industry_context(sector=None, industry=None) -> str:
-    return f"""
-When analyzing valuation metrics like PE ratio, consider the industry context:
+def force_float(v):
+    if isinstance(v, (float, int)):
+        return round(v, 4)
+    if isinstance(v, np.generic):
+        return round(float(v), 4)
+    return 0.0
 
-- For **tech, AI, or high-growth sectors**, a PE ratio around **25–35** is often acceptable.
-- For **stable or low-growth sectors** like **healthcare, energy, or retail**, a PE above **25** can signal **overvaluation**.
-- Always adjust valuation expectations based on the industry.
 
-This stock's sector is: {sector or 'Unknown'}, industry: {industry or 'Unknown'}.
-"""
-
-@an_bp.route('/', methods=['GET'])
+@an_bp.route("/", methods=["GET"])
 def analyze():
-    ticker = request.args.get('ticker', '').upper()
-    term = request.args.get('term', 'long')
-    penny_flag = request.args.get('penny', 'false').lower() == 'true'
-    age = request.args.get('age', None)
-    risk_profile = request.args.get('risk_profile', '')
+    ticker = request.args.get("ticker", "").upper()
+    term = request.args.get("term", "long")
+    penny_flag = request.args.get("penny", "false").lower() == "true"
+    age = request.args.get("age")
+    risk_profile = request.args.get("risk_profile", "")
 
-    if not ticker:
-        return jsonify({"error": "ticker is required"}), 400
+    # --- Data Fetching ---
+    fund = _get_fund_json(ticker).get_json()
+    insider_data = get_insider_trading(ticker)
+    insider = insider_data.get("insider_transactions", [])
+    news_counts, stories = fetch_and_analyze_news(ticker)
 
-    # --- Fundamentals ---
-    fund_data = _get_fund_json(ticker).get_json()
-    pe_score = normalize(fund_data.get('pe'), 0, 100)
-    pb_score = normalize(fund_data.get('pb'), 0, 10)
-    fund_score = (pe_score + pb_score) / 2
+    df = yf.Ticker(ticker).history(period="1y")
+    if df.empty:
+        return jsonify({"error": "No price data"}), 400
+    close = df["Close"]
+    vol = df["Volume"]
 
-    sector = fund_data.get("sector")
-    industry = fund_data.get("industry")
-    context = generate_industry_context(sector, industry)
-
-    # --- Technicals ---
-    df = yf.Ticker(ticker).history(period='1y')
-    close = df['Close']
-    vol = df['Volume']
-
-    rsi_val = calculate_rsi(close)
-    macd_val, sig = calculate_macd(close)
+    # --- Technical Indicators ---
+    rsi = calculate_rsi(close)
+    macd, sig = calculate_macd(close)
     sma50, sma200 = get_smas(close)
+    bb_index, is_squeeze = calculate_volatility_index(close)
+    stoch_rsi = stochastic_rsi(close)
+    adx = calculate_adx(df)
+    ema_signal = ema_crossovers(close)
     vol_spk = volume_spike(vol)
-    tech_score = 1 - abs(rsi_val - 50) / 50
-    if vol_spk:
-        tech_score += 0.1
-    tech_score = min(1, tech_score)
+    last_candle = candle_type(df["Open"].iloc[-1], close.iloc[-1])
 
-    # --- Insider ---
-    insider_trades = _get_insider_json(ticker).get_json()
-    insider_score = 0.5
-    for t in insider_trades:
-        if t.get('trade_type', '').lower() == 'sell':
-            insider_score -= 0.1
-        else:
-            insider_score += 0.1
-    insider_score = max(0, min(1, insider_score))
+    # --- Scores ---
+    scores = {
+        "fund": score_fundamentals(fund),
+        "tech": score_technicals(rsi, vol_spk),
+        "insider": score_insiders(insider),
+        "news": score_sentiment(news_counts)
+    }
 
-    # --- News ---
-    counts, top_stories = fetch_and_analyze_news(ticker)
-    total = sum(counts.values()) or 1
-    news_score = (counts['positive'] - counts['negative']) / total
-    news_score = (news_score + 1) / 2
-
-    # --- Weighted Final Score ---
     if penny_flag:
-        final_score = (
-            0.45 * news_score +
-            0.125 * insider_score +
-            0.325 * tech_score +
-            0.10 * fund_score
-        )
-    elif term == 'short':
-        final_score = (
-            0.30 * news_score +
-            0.05 * insider_score +
-            0.35 * tech_score +
-            0.30 * fund_score
-        )
+        scores["final"] = 0.45 * scores["news"] + 0.125 * scores["insider"] + 0.325 * scores["tech"] + 0.1 * scores["fund"]
+    elif term == "short":
+        scores["final"] = 0.3 * scores["news"] + 0.05 * scores["insider"] + 0.3 * scores["tech"] + 0.35 * scores["fund"]
     else:
-        final_score = (
-            0.15 * news_score +
-            0.02 * insider_score +
-            0.38 * tech_score +
-            0.45 * fund_score
-        )
+        scores["final"] = 0.15 * scores["news"] + 0.02 * scores["insider"] + 0.38 * scores["tech"] + 0.45 * scores["fund"]
 
-    # --- Peer PE Analysis ---
-    def get_cached_peers(ticker):
-        now = time.time()
-        if ticker in peer_cache:
-            ts, peers = peer_cache[ticker]
-            if now - ts < PEER_CACHE_TTL:
-                print(f"[PEER] Cache HIT for {ticker}")
-                return peers
-        print(f"[PEER] Cache MISS for {ticker}")
-        try:
-            peer_prompt = f"Give me 5 stocks similar to {ticker} as a JSON array of short ticker names."
-            peer_resp = get_groq_analysis(peer_prompt)
-            peers = json.loads(peer_resp)
-            peer_cache[ticker] = (now, peers)
-            return peers
-        except Exception as e:
-            print("[PEER] Error getting similar peers:", e)
-            return []
+    scores_clean = {
+        "fund_score": force_float(scores["fund"]),
+        "tech_score": force_float(scores["tech"]),
+        "news_score": force_float(scores["news"]),
+        "insider_score": force_float(scores["insider"]),
+        "final_score": force_float(scores["final"]),
+    }
 
-    similar_peers = get_cached_peers(ticker)
+    # --- Prompt & AI Summary ---
+    context = f"This stock's sector is {fund.get('sector')}, industry: {fund.get('industry')}."
+    peer_comment = get_cached_peers(ticker)
 
-    peer_pes = []
-    for peer in similar_peers:
-        if peer == ticker:
-            continue
-        try:
-            peer_fund = _get_fund_json(peer).get_json()
-            peer_pe = peer_fund.get("pe")
-            if peer_pe:
-                peer_pes.append((peer, peer_pe))
-        except:
-            continue
+    technicals = {
+        "current_price": fund.get("current_price"),
+        "sma_50": sma50,
+        "sma_200": sma200,
+        "trend_zone": trend_zone(close.iloc[-1], sma50, sma200),
+        "ema_crossover": ema_signal,
+        "adx": adx,
+        "rsi": rsi,
+        "macd": macd,
+        "signal": sig,
+        "stochastic_rsi": stoch_rsi,
+        "volatility_index": bb_index,
+        "squeeze_zone": "Compression" if is_squeeze else "Expansion",
+        "volume_today": int(vol.iloc[-1]),
+    }
 
-    peer_avg_pe = sum(pe for _, pe in peer_pes) / len(peer_pes) if peer_pes else None
-    peer_pe_comment = (
-        f"{ticker} has a PE of {fund_data.get('pe')}, compared to similar peers' average PE of {round(peer_avg_pe, 2)}."
-        if peer_avg_pe else ""
+    prompt = build_prompt(
+        ticker, scores, context, peer_comment,
+        {
+            "term": term,
+            "penny_flag": penny_flag,
+            "age": age,
+            "risk_profile": risk_profile
+        },
+        technicals=technicals
     )
-    if peer_avg_pe and abs(fund_data.get('pe', 0) - peer_avg_pe) < 3 and news_score < 0.4:
-        peer_pe_comment += " However, recent news sentiment is negative, which may impact short-term movement."
 
-    # --- Groq AI Summary ---
-    prompt = f"""
-    Analyze {ticker}:
-    • Fundamental score: {fund_score:.2f}
-    • Technical score: {tech_score:.2f}
-    • Insider score: {insider_score:.2f}
-    • News score: {news_score:.2f}
-    • Combined score: {final_score:.2f}
-    • Risk profile: {risk_profile}
-    • Term: {term}
-    • Penny stock: {penny_flag}
-    • Age: {age}
-    
-    {context}
-    {peer_pe_comment}
+    summary = get_groq_analysis(prompt)
 
-    Provide a concise buy/hold/sell recommendation with 2–3 sentence rationale.
-    """
-    try:
-        ai_resp = get_groq_analysis(prompt)
-    except Exception as e:
-        ai_resp = f"AI summary unavailable: {e}"
-
-    return jsonify({
-        "fundamentals": fund_data,
-        "fundamental": {
-            "trailing_pe": fund_data.get("pe"),
-            "pb_ratio": fund_data.get("pb"),
-            "market_cap": fund_data.get("market_cap"),
-            "earnings_growth": fund_data.get("earnings_growth"),
-            "revenue_growth": fund_data.get("revenue_growth"),
-            "fpe": fund_data.get("forward_pe"),
-            "trailing_pe": fund_data.get("pe"),
-            "pb_ratio": fund_data.get("pb"),
+    response = {
+        "scores": scores_clean,
+        "fundamentals": fund,
+        "insider_trades": insider,
+        "news": {
+            "sentiment_counts": news_counts,
+            "top_stories": stories
         },
         "technical": {
-            "rsi": float(rsi_val),
-            "macd": float(macd_val),
-            "signal": float(sig),
-            "sma_50": float(sma50) if sma50 else None,
-            "sma_200": float(sma200) if sma200 else None,
-
+            "rsi": rsi,
+            "macd": macd,
+            "signal": sig,
+            "sma_50": sma50,
+            "sma_200": sma200,
             "trend_zone": trend_zone(close.iloc[-1], sma50, sma200),
-            "volume_spike": bool(vol_spk),
-            "last_candle": candle_type(df['Open'].iloc[-1], close.iloc[-1])
+            "volume_spike": vol_spk,
+            "last_candle": last_candle,
+            "volatility_index": bb_index,
+            "squeeze_zone": "Compression" if is_squeeze else "Expansion",
+            "stochastic_rsi": stoch_rsi,
+            "adx": adx,
+            "ema_crossover": ema_signal
         },
-        "insider_trades": insider_trades,
-        "news": {
-            "sentiment_counts": counts,
-            "top_stories": top_stories
-        },
-        "scores": {
-            "fund_score": round(fund_score, 2),
-            "tech_score": round(tech_score, 2),
-            "insider_score": round(insider_score, 2),
-            "news_score": round(news_score, 2),
-            "final_score": round(final_score, 2)
-        },
-        "ai_analysis": ai_resp
-    })
+        "ai_analysis": summary
+    }
+
+    return jsonify(sanitize(response))

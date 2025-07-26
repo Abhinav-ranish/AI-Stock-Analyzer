@@ -21,7 +21,10 @@ export default function StockLinks({ ticker }: { ticker: string }) {
   ];
 
   const otherLinks = [
-    ["Investopedia", `https://www.investopedia.com/markets/stocks/${safeTicker}`],
+    [
+      "Investopedia",
+      `https://www.investopedia.com/markets/stocks/${safeTicker}`,
+    ],
     ["Nasdaq", `https://www.nasdaq.com/market-activity/stocks/${safeTicker}`],
     ["OpenInsider", `http://openinsider.com/search?q=${safeTicker}`],
     ["StockInvest", `https://stockinvest.us/stock/${safeTicker}`],
@@ -47,7 +50,12 @@ export default function StockLinks({ ticker }: { ticker: string }) {
         <DropdownMenuContent align="end">
           {otherLinks.map(([name, url], i) => (
             <DropdownMenuItem key={i} asChild>
-              <a href={url} target="_blank" rel="noopener noreferrer" className="w-full">
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full"
+              >
                 {name}
               </a>
             </DropdownMenuItem>

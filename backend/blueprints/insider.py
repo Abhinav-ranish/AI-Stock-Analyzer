@@ -1,71 +1,61 @@
-# blueprints/insider.py
-
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify
+import os
 import requests
-import yfinance as yf
-from bs4 import BeautifulSoup
 
 ins_bp = Blueprint('insider', __name__, url_prefix='/insider')
 
-def get_insider_trading(ticker):
-    """Fetch and parse insider trading data from OpenInsider."""
-    url = f"http://openinsider.com/screener?s={ticker}"
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-    }
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
+
+def fetch_finnhub_insider_data(ticker):
+    base_url = "https://finnhub.io/api/v1"
+    headers = {"X-Finnhub-Token": FINNHUB_API_KEY}
+
+    tx_url = f"{base_url}/stock/insider-transactions?symbol={ticker}"
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "html.parser")
+        tx_resp = requests.get(tx_url, headers=headers, timeout=10)
+        tx_resp.raise_for_status()
+        transactions = tx_resp.json().get("data", [])
+    except Exception as e:
+        print(f"[insider] Error fetching data: {e}")
+        return {"error": "Failed to fetch data"}
 
-        table = soup.find("table", class_="tinytable")
-        if not table:
-            return []
+    # Filtering
+    MIN_SHARES = 100_000
+    MIN_VALUE = 1_000_000
+    filtered = []
 
-        rows = table.find_all("tr")[1:]  # skip header
-        trades = []
-        for row in rows:
-            cols = row.find_all("td")
-            if len(cols) < 11:
-                continue
+    for t in transactions:
+        try:
+            shares = abs(t.get("change", 0))
+            price = t.get("transactionPrice", 0)
+            value = shares * price
 
-            trades.append({
-                "filing_date": cols[1].get_text(strip=True),
-                "trade_date":   cols[2].get_text(strip=True),
-                "insider":      cols[4].get_text(strip=True),
-                "trade_type":   cols[6].get_text(strip=True),
-                "price":        cols[7].get_text(strip=True),
-                "quantity":     cols[8].get_text(strip=True).replace(',', ''),
-                "value":        cols[10].get_text(strip=True).replace(',', ''),
-            })
-        return trades
+            if shares >= MIN_SHARES or value >= MIN_VALUE:
+                filtered.append({
+                    "name": t.get("name"),
+                    "shares_changed": shares,
+                    "price": price,
+                    "value": round(value, 2),
+                    "date": t.get("transactionDate"),
+                    "filing_date": t.get("filingDate"),
+                    "code": t.get("transactionCode"),
+                    "symbol": t.get("symbol")
+                })
+        except Exception:
+            continue
 
-    except requests.RequestException as e:
-        # Log or handle error as you prefer
-        print(f"[insider] error fetching {ticker}: {e}")
-        return []
+    result_json = {"insider_transactions": filtered}
+
+    # Optional: debug print with safe trimming
+    preview = str(result_json)
+    if len(preview) > 1000:
+        print("[insider preview]", preview[:1000] + "...")
+    else:
+        print("[insider preview]", preview)
+
+    return result_json
 
 @ins_bp.route('/<ticker>')
-def get_filtered_insider(ticker):
-    # 1) scrape all insider trades
-    trades = get_insider_trading(ticker)
-
-    # 2) pull float shares from yfinance
-    info = yf.Ticker(ticker).info
-    float_shares = info.get('floatShares')
-
-    big_trades = []
-    if float_shares:
-        for t in trades:
-            try:
-                qty = int(t['quantity'])
-                if qty / float_shares >= 0.01:
-                    big_trades.append(t)
-            except ValueError:
-                continue
-
-    # if we couldn’t get float_shares, just return everything
-    return jsonify(big_trades if float_shares else trades)
+def get_insider_info(ticker):
+    data = fetch_finnhub_insider_data(ticker.upper())
+    return jsonify(data)

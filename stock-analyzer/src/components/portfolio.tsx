@@ -18,20 +18,27 @@ type TickerRow = {
 };
 
 async function fetchCompanyInfo(ticker: string) {
-  const res = await fetch(`https://api.aranish.uk/fundamentals/${ticker}`);
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
+  const res = await fetch(`${baseUrl}/fundamentals/${ticker}`);
   if (!res.ok) throw new Error("Invalid ticker");
   const data = await res.json();
   return {
     name: data.industry || data.sector || "Unknown",
-    price: data.pe?.toFixed(2) ?? "N/A",
+    price:
+      data.current_price !== null && data.current_price !== undefined
+        ? data.current_price.toFixed(2)
+        : "N/A",
   };
 }
 
 export default function PortfolioTickerTable() {
-  const email =
-    typeof window !== "undefined" ? localStorage.getItem("email") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  const { tickers, loading, addTicker, deleteTicker } = usePortfolio(email || "");
+  const { tickers, loading, addTicker, deleteTicker } = usePortfolio(
+    token || ""
+  );
+
   const [input, setInput] = useState("");
   const [data, setData] = useState<TickerRow[]>([]);
 
@@ -46,7 +53,7 @@ export default function PortfolioTickerTable() {
       }));
       setData(processed);
 
-      tickers.forEach(async (t, i) => {
+      tickers.forEach(async (t) => {
         try {
           const { name, price } = await fetchCompanyInfo(t.ticker);
           setData((prev) =>
@@ -69,22 +76,28 @@ export default function PortfolioTickerTable() {
 
   const handleAdd = async () => {
     const ticker = input.trim().toUpperCase();
-    if (!ticker || !email) return;
+    if (!ticker || !token) return;
+
+    setInput("");
 
     const placeholder: TickerRow = {
       sno: data.length + 1,
       ticker,
       name: "Loading...",
       price: "Loading...",
-      frequency: "weekly", // default
+      frequency: "weekly",
     };
 
     setData((prev) => [...prev, placeholder]);
-    setInput("");
 
     try {
-      await addTicker(ticker, "weekly");
+      // ✅ Validate ticker before saving to backend
       const { name, price } = await fetchCompanyInfo(ticker);
+
+      // ✅ Save only if valid
+      await addTicker(ticker, "weekly");
+
+      // ✅ Update with fetched info
       setData((prev) =>
         prev.map((row) =>
           row.ticker === ticker ? { ...row, name, price } : row
@@ -93,7 +106,7 @@ export default function PortfolioTickerTable() {
     } catch (err) {
       toast.error("Invalid ticker or backend error");
 
-      // Show error in UI
+      // Show error visually
       setData((prev) =>
         prev.map((row) =>
           row.ticker === ticker
@@ -102,7 +115,7 @@ export default function PortfolioTickerTable() {
         )
       );
 
-      // Auto-remove
+      // Remove the row after delay
       setTimeout(() => {
         setData((prev) =>
           prev
@@ -152,7 +165,7 @@ export default function PortfolioTickerTable() {
           onChange={(e) => setInput(e.target.value)}
           className="max-w-xs"
         />
-        <Button onClick={handleAdd} disabled={!email}>
+        <Button onClick={handleAdd} disabled={!token}>
           Add Ticker
         </Button>
       </div>

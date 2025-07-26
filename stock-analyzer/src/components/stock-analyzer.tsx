@@ -16,7 +16,7 @@ import TradingViewWidget from "./trading-view";
 import { Maximize2 } from "lucide-react";
 import { marked } from "marked";
 
-const renderMarkdown = (md: string) => marked(md);
+const renderMarkdown = (md: string) => marked(md || "_No data found._");
 
 type StockResponse = {
   ticker: string;
@@ -27,8 +27,6 @@ type StockResponse = {
     news_score: number;
     insider_score: number;
     final_score: number;
-    sma_50: number;
-    sma_200: number;
   };
   technical: {
     rsi: number;
@@ -40,8 +38,10 @@ type StockResponse = {
     sma_50: number;
     sma_200: number;
   };
-  fundamental: {
-    pb_ratio?: number;
+  fundamentals: {
+    pb?: number;
+    pe?: number;
+    forward_pe?: number;
     trailing_pe?: number;
     market_cap?: number;
     earnings_growth?: number;
@@ -54,14 +54,43 @@ type StockResponse = {
   };
 };
 
+type ParsedSections = {
+  recommendation: string;
+  strengths: string;
+  weaknesses: string;
+  fundamentals: string;
+  verdict: string;
+};
+
+function parseSections(md: string): ParsedSections {
+  const verdictMatch = md.match(/^## \*\*(.+?)\*\*/m);
+  const verdict = verdictMatch?.[1] || "";
+
+  
+  const recSplit = md.split("##");
+
+  const strengthSplit = md.split("## Strengths");
+  const weaknessSplit = strengthSplit[1]?.split("## Weaknesses");
+  const fundamentalsSplit = weaknessSplit?.[1]?.split("## Fundamentals");
+
+  return {
+    recommendation: (recSplit[1] || "").trim(),
+    strengths: (weaknessSplit?.[0]?.trim() || ""),
+    weaknesses: (fundamentalsSplit?.[0]?.trim() || ""),
+    fundamentals: (fundamentalsSplit?.[1]?.trim() || ""),
+    verdict: verdict.toUpperCase(),
+  };
+}
+
 export default function StockAnalyzer() {
   const [height, setHeight] = useState(600);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setHeight(window.innerHeight * 0.85); // not full height, better spacing
+      setHeight(window.innerHeight * 0.85);
     }
   }, []);
+
   const [ticker, setTicker] = useState("");
   const [term, setTerm] = useState<"short" | "long">("long");
   const [penny, setPenny] = useState(false);
@@ -69,6 +98,16 @@ export default function StockAnalyzer() {
   const [riskProfile, setRiskProfile] = useState("");
   const [data, setData] = useState<StockResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const sections: ParsedSections = data
+    ? parseSections(data.ai_analysis)
+    : {
+        recommendation: "",
+        strengths: "",
+        weaknesses: "",
+        fundamentals: "",
+        verdict: "",
+      };
 
   const cleanTicker = ticker.trim().toUpperCase();
   if (cleanTicker !== ticker) setTicker(cleanTicker);
@@ -84,8 +123,10 @@ export default function StockAnalyzer() {
         ...(age ? { age: String(age) } : {}),
         ...(riskProfile ? { risk_profile: riskProfile } : {}),
       });
+      const baseUrl =
+        process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
+      const res = await fetch(`${baseUrl}/analysis/?${query}`);
 
-      const res = await fetch(`https://api.aranish.uk/analysis/?${query}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const result = await res.json();
       setData(result);
@@ -95,6 +136,7 @@ export default function StockAnalyzer() {
       setLoading(false);
     }
   };
+
   function formatMarketCap(value?: number) {
     if (!value || value < 1) return "N/A";
     const billion = 1_000_000_000;
@@ -110,7 +152,6 @@ export default function StockAnalyzer() {
         <StockLinks ticker={ticker} />
       </div>
 
-      {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <Input
           value={ticker}
@@ -155,10 +196,8 @@ export default function StockAnalyzer() {
         />
       </div>
 
-      {/* DATA SECTION */}
       {data && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          {/* LEFT: TradingView + Fullscreen */}
           <Card>
             <CardContent className="p-4 space-y-2">
               <div className="flex justify-between items-center">
@@ -169,12 +208,10 @@ export default function StockAnalyzer() {
                       <Maximize2 className="w-4 h-4" />
                     </Button>
                   </DialogTrigger>
-
                   <DialogContent className="z-50 bg-black/90 backdrop-blur-md w-screen h-screen max-w-none max-h-none rounded-none overflow-hidden">
                     <DialogTitle className="sr-only">
                       Fullscreen Chart
                     </DialogTitle>
-
                     <div className="w-full h-full">
                       <TradingViewWidget ticker={ticker} height={height} />
                     </div>
@@ -185,28 +222,62 @@ export default function StockAnalyzer() {
             </CardContent>
           </Card>
 
-          {/* RIGHT: Tabs for AI + Scores */}
           <Tabs defaultValue="summary" className="w-full">
-            <TabsList className="mb-4">
+            <TabsList className="">
               <TabsTrigger value="summary">AI Summary</TabsTrigger>
               <TabsTrigger value="scores">Score & Indicators</TabsTrigger>
             </TabsList>
 
             <TabsContent value="summary">
               <Card>
-                <CardContent className="p-4 whitespace-pre-line">
-                  <h2 className="text-xl font-semibold mb-2">
-                    AI Summary for {ticker}
-                  </h2>
-                  <p
-                    dangerouslySetInnerHTML={{
-                      __html: renderMarkdown(data.ai_analysis),
-                    }}
-                  />
+                <CardContent className="p-4">
+                  <Tabs defaultValue="rec" className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="rec">💡 Recommendation</TabsTrigger>
+                      <TabsTrigger value="strengths">📈 Strengths</TabsTrigger>
+                      <TabsTrigger value="weaknesses">
+                        📉 Weaknesses
+                      </TabsTrigger>
+                      <TabsTrigger value="fundamentals">
+                        🧠 Fundamentals
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="rec">
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: marked(sections.recommendation),
+                        }}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="strengths">
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: marked(sections.strengths),
+                        }}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="weaknesses">
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: marked(sections.weaknesses),
+                        }}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="fundamentals">
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: marked(sections.fundamentals),
+                        }}
+                      />
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </TabsContent>
-
             <TabsContent value="scores">
               <Card>
                 <CardContent className="p-4 space-y-6">
@@ -248,27 +319,27 @@ export default function StockAnalyzer() {
                       <h3 className="font-semibold text-lg ">Fundamentals</h3>
                       <p>
                         <strong>P/B Ratio:</strong>{" "}
-                        {data.fundamental.pb_ratio?.toFixed(2) ?? "N/A"}
+                        {data.fundamentals?.pb?.toFixed(2) ?? "N/A"}
                       </p>
                       <p>
                         <strong>Trailing P/E:</strong>{" "}
-                        {data.fundamental.trailing_pe?.toFixed(2) ?? "N/A"}
+                        {data.fundamentals?.pe?.toFixed(2) ?? "N/A"}
                       </p>
                       <p>
                         <strong>Forward P/E:</strong>{" "}
-                        {data.fundamental?.fpe ?? "N/A"}
+                        {data.fundamentals?.forward_pe?.toFixed(2) ?? "N/A"}
                       </p>
                       <p>
                         <strong>Market Cap:</strong>{" "}
-                        {data.fundamental?.market_cap ?? "N/A"}
+                        {formatMarketCap(data.fundamentals?.market_cap)}
                       </p>
                       <p>
                         <strong>Earnings Growth:</strong>{" "}
-                        {data.fundamental?.earnings_growth ?? "N/A"}
+                        {data.fundamentals?.earnings_growth ?? "N/A"}
                       </p>
                       <p>
                         <strong>Revenue Growth:</strong>{" "}
-                        {data.fundamental?.revenue_growth ?? "N/A"}
+                        {data.fundamentals?.revenue_growth ?? "N/A"}
                       </p>
                     </div>
                   </div>

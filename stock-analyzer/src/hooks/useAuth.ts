@@ -6,7 +6,8 @@ export function useAuth() {
   const router = useRouter();
 
   async function register(nickname: string, email: string, password?: string) {
-    const res = await fetch("https://api.aranish.uk/auth/register", {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
+    const res = await fetch(`${baseUrl}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nickname, email, password }),
@@ -19,7 +20,8 @@ export function useAuth() {
   }
 
   async function login(email: string, password?: string) {
-    const res = await fetch("https://api.aranish.uk/auth/login", {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
+    const res = await fetch(`${baseUrl}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),

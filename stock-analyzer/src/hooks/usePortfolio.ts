@@ -1,28 +1,29 @@
-// src/hooks/usePortfolio.ts
 import { useState, useEffect } from "react";
 
-const API = "https://api.aranish.uk/portfolio";
-const headers = {
-  "Content-Type": "application/json",
-};
+const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
+const API = `${baseUrl}/portfolio`;
 
-export function usePortfolio(email: string) {
+export function usePortfolio(token: string) {
   const [tickers, setTickers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const authHeader = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
   const fetchTickers = async () => {
-    const res = await fetch(`${API}/${email}`);
+    const res = await fetch(`${API}`, { headers: authHeader });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to fetch");
-    setTickers(data.tickers);
+    setTickers(data || []);
     setLoading(false);
   };
 
   const addTicker = async (ticker: string, frequency: string) => {
     const res = await fetch(API, {
       method: "POST",
-      headers,
-      body: JSON.stringify({ email, ticker, frequency }),
+      headers: authHeader,
+      body: JSON.stringify({ ticker, frequency }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Add failed");
@@ -30,10 +31,9 @@ export function usePortfolio(email: string) {
   };
 
   const deleteTicker = async (ticker: string) => {
-    const res = await fetch(API, {
+    const res = await fetch(`${API}/${ticker}`, {
       method: "DELETE",
-      headers,
-      body: JSON.stringify({ email, ticker }),
+      headers: authHeader,
     });
     if (!res.ok) throw new Error("Delete failed");
     setTickers((prev) => prev.filter((t) => t.ticker !== ticker));
@@ -42,8 +42,8 @@ export function usePortfolio(email: string) {
   const updateFrequency = async (ticker: string, frequency: string) => {
     const res = await fetch(API, {
       method: "PATCH",
-      headers,
-      body: JSON.stringify({ email, ticker, frequency }),
+      headers: authHeader,
+      body: JSON.stringify({ ticker, frequency }),
     });
     if (!res.ok) throw new Error("Update failed");
     setTickers((prev) =>
@@ -52,8 +52,8 @@ export function usePortfolio(email: string) {
   };
 
   useEffect(() => {
-    if (email) fetchTickers();
-  }, [email]);
+    if (token) fetchTickers();
+  }, [token]);
 
   return { tickers, loading, addTicker, deleteTicker, updateFrequency };
 }
