@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
+import { usePortfolio } from "@/hooks/usePortfolio";
 
-export type TickerRow = {
+type TickerRow = {
   sno: number;
   ticker: string;
   name: string;
   price: string;
+  frequency: string;
 };
 
 async function fetchCompanyInfo(ticker: string) {
@@ -26,46 +28,72 @@ async function fetchCompanyInfo(ticker: string) {
 }
 
 export default function PortfolioTickerTable() {
+  const email =
+    typeof window !== "undefined" ? localStorage.getItem("email") : null;
+
+  const { tickers, loading, addTicker, deleteTicker } = usePortfolio(email || "");
   const [input, setInput] = useState("");
   const [data, setData] = useState<TickerRow[]>([]);
 
+  useEffect(() => {
+    if (!loading && tickers.length) {
+      const processed = tickers.map((t, i) => ({
+        sno: i + 1,
+        ticker: t.ticker,
+        frequency: t.frequency,
+        name: "Loading...",
+        price: "Loading...",
+      }));
+      setData(processed);
+
+      tickers.forEach(async (t, i) => {
+        try {
+          const { name, price } = await fetchCompanyInfo(t.ticker);
+          setData((prev) =>
+            prev.map((row) =>
+              row.ticker === t.ticker ? { ...row, name, price } : row
+            )
+          );
+        } catch {
+          setData((prev) =>
+            prev.map((row) =>
+              row.ticker === t.ticker
+                ? { ...row, name: "Error", price: "Error" }
+                : row
+            )
+          );
+        }
+      });
+    }
+  }, [tickers, loading]);
+
   const handleAdd = async () => {
     const ticker = input.trim().toUpperCase();
-    if (!ticker) return;
+    if (!ticker || !email) return;
 
-    // Placeholder
     const placeholder: TickerRow = {
       sno: data.length + 1,
       ticker,
       name: "Loading...",
       price: "Loading...",
+      frequency: "weekly", // default
     };
+
     setData((prev) => [...prev, placeholder]);
     setInput("");
 
     try {
+      await addTicker(ticker, "weekly");
       const { name, price } = await fetchCompanyInfo(ticker);
       setData((prev) =>
         prev.map((row) =>
           row.ticker === ticker ? { ...row, name, price } : row
         )
       );
-    } catch {
-      // Auto-remove invalid entry
-      setTimeout(() => {
-        setData((prev) =>
-          prev
-            .filter((row) => row.ticker !== ticker)
-            .map((row, i) => ({ ...row, sno: i + 1 }))
-        );
-      }, 2000);
+    } catch (err) {
+      toast.error("Invalid ticker or backend error");
 
-      // Show toast
-      toast("Invalid ticker");
-      toast.error("Failed to fetch company info");
-      toast.success("Ticker added successfully");
-
-      // Show temporary error in UI
+      // Show error in UI
       setData((prev) =>
         prev.map((row) =>
           row.ticker === ticker
@@ -73,12 +101,27 @@ export default function PortfolioTickerTable() {
             : row
         )
       );
+
+      // Auto-remove
+      setTimeout(() => {
+        setData((prev) =>
+          prev
+            .filter((row) => row.ticker !== ticker)
+            .map((row, i) => ({ ...row, sno: i + 1 }))
+        );
+      }, 2000);
     }
   };
 
-  const handleDelete = (index: number) => {
-    const updated = data.filter((_, i) => i !== index);
-    setData(updated.map((row, i) => ({ ...row, sno: i + 1 })));
+  const handleDelete = async (index: number) => {
+    const ticker = data[index].ticker;
+    try {
+      await deleteTicker(ticker);
+      const updated = data.filter((_, i) => i !== index);
+      setData(updated.map((row, i) => ({ ...row, sno: i + 1 })));
+    } catch {
+      toast.error("Failed to delete ticker");
+    }
   };
 
   const columns: ColumnDef<TickerRow>[] = [
@@ -109,7 +152,9 @@ export default function PortfolioTickerTable() {
           onChange={(e) => setInput(e.target.value)}
           className="max-w-xs"
         />
-        <Button onClick={handleAdd}>Add Ticker</Button>
+        <Button onClick={handleAdd} disabled={!email}>
+          Add Ticker
+        </Button>
       </div>
       <DataTable
         columns={columns}
