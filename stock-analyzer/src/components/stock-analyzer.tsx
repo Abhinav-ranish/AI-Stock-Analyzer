@@ -23,6 +23,7 @@ import TVTechnicalAnalysis from "./charts/TVTechnicalAnalysis";
 import TVFinancials from "./charts/TVFinancials";
 import TVSymbolInfo from "./charts/TVSymbolInfo";
 import TVSymbolProfile from "./charts/TVSymbolProfile";
+import TickerSearchInput from "./Search-bar";
 
 const renderMarkdown = (md: string) => marked(md || "_No data found._");
 
@@ -161,19 +162,15 @@ export default function StockAnalyzer() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-6">
-      <div className="fixed left-5 top-1/2 -translate-y-1/2 z-50">
+      <div className="fixed left-5 top-1/2 -translate-y-1/2 z-50 hidden sm:block">
         <StockLinks ticker={ticker} />
       </div>
-      <div className="mb-4 invert scale-[1] rounded-md overflow-hidden">
+      <div className="mb-4 dark:invert scale-[1] rounded-md overflow-hidden">
         <TVTickerTape />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <Input
-          value={ticker}
-          onChange={(e) => setTicker(e.target.value)}
-          placeholder="Enter ticker..."
-        />
+        <TickerSearchInput value={ticker} onChange={setTicker} />
         <Button onClick={fetchStockData} disabled={loading}>
           {loading ? "Analyzing..." : "Analyze"}
         </Button>
@@ -216,7 +213,7 @@ export default function StockAnalyzer() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <Card>
             <CardContent className="p-4 space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="mt-[-1.5rem] flex justify-between items-center">
                 <h2 className="font-semibold text-sm">Live Chart</h2>
                 <Dialog>
                   <DialogTrigger asChild>
@@ -248,17 +245,32 @@ export default function StockAnalyzer() {
               <Card>
                 <CardContent className="p-4">
                   <Tabs defaultValue="rec" className="w-full">
-                    <TabsList className="mb-4">
-                      <TabsTrigger value="rec">💡 Recommendation</TabsTrigger>
-                      <TabsTrigger value="strengths">📈 Strengths</TabsTrigger>
-                      <TabsTrigger value="weaknesses">
-                        📉 Weaknesses
-                      </TabsTrigger>
-                      <TabsTrigger value="fundamentals">
-                        🧠 Fundamentals
-                      </TabsTrigger>
-                    </TabsList>
-
+                    <div className="flex justify-center mt-[-1.5rem]">
+                      <TabsList className="mb-4 justify-center flex-wrap">
+                        <TabsTrigger value="rec">
+                          <span className="block sm:hidden">💡</span>
+                          <span className="hidden sm:inline">
+                            💡 Recommendation
+                          </span>
+                        </TabsTrigger>
+                        <TabsTrigger value="strengths">
+                          <span className="block sm:hidden">📈</span>
+                          <span className="hidden sm:inline">📈 Strengths</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="weaknesses">
+                          <span className="block sm:hidden">📉</span>
+                          <span className="hidden sm:inline">
+                            📉 Weaknesses
+                          </span>
+                        </TabsTrigger>
+                        <TabsTrigger value="fundamentals">
+                          <span className="block sm:hidden">🧠</span>
+                          <span className="hidden sm:inline">
+                            🧠 Fundamentals
+                          </span>
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
                     <TabsContent value="rec">
                       <div
                         dangerouslySetInnerHTML={{
@@ -353,56 +365,58 @@ export default function StockAnalyzer() {
                           ? data.fundamentals.pe.toFixed(2)
                           : "N/A"}
                       </p>
-                        <p>
+                      <p>
                         <strong>Forward P/E:</strong>{" "}
                         {typeof data.fundamentals?.forward_pe === "number"
                           ? data.fundamentals.forward_pe.toFixed(2)
                           : "N/A"}
-                        </p>
-                        <p>
+                      </p>
+                      <p>
                         <strong>Market Cap:</strong>{" "}
                         {typeof data.fundamentals?.market_cap === "number"
                           ? formatMarketCap(data.fundamentals.market_cap)
                           : "N/A"}
-                        </p>
-                        <p>
+                      </p>
+                      <p>
                         <strong>Earnings Growth:</strong>{" "}
                         {typeof data.fundamentals?.earnings_growth === "number"
                           ? data.fundamentals.earnings_growth
                           : "N/A"}
-                        </p>
-                        <p>
+                      </p>
+                      <p>
                         <strong>Revenue Growth:</strong>{" "}
                         {typeof data.fundamentals?.revenue_growth === "number"
                           ? data.fundamentals.revenue_growth
                           : "N/A"}
-                        </p>
+                      </p>
                     </div>
                   </div>
 
                   {/* News Sentiment */}
-                    <div className="pt-4 border-t">
+                  <div className="pt-4 border-t">
                     <h3 className="font-semibold text-lg mb-1">
                       News Sentiment
                     </h3>
                     {data.news && data.news.sentiment_counts ? (
                       <div className="text-sm flex gap-4">
-                      <span>
-                        🟢 Positive: {data.news.sentiment_counts.positive || 0}
-                      </span>
-                      <span>
-                        🟡 Neutral: {data.news.sentiment_counts.neutral || 0}
-                      </span>
-                      <span>
-                        🔴 Negative: {data.news.sentiment_counts.negative || 0}
-                      </span>
+                        <span>
+                          🟢 Positive:{" "}
+                          {data.news.sentiment_counts.positive || 0}
+                        </span>
+                        <span>
+                          🟡 Neutral: {data.news.sentiment_counts.neutral || 0}
+                        </span>
+                        <span>
+                          🔴 Negative:{" "}
+                          {data.news.sentiment_counts.negative || 0}
+                        </span>
                       </div>
                     ) : (
                       <div className="text-sm text-muted-foreground">
-                      News sentiment data not available.
+                        News sentiment data not available.
                       </div>
                     )}
-                    </div>
+                  </div>
 
                   {/* Scores */}
                   <div className="pt-4 border-t">
@@ -423,23 +437,21 @@ export default function StockAnalyzer() {
               </Card>
             </TabsContent>
           </Tabs>
-          <div className="overflow-hidden invert rounded-lg scale-101 flex">
+          <div className="overflow-hidden dark:invert rounded-lg scale-101 flex">
             <div className="w-full">
               <TVTechnicalAnalysis ticker={ticker} height={450} />
             </div>
           </div>
-  
 
-            <div className="invert rounded-lg scale-101 flex overflow-hidden">
-              <TVFinancials ticker={ticker} height={450} />
-            </div>
-          <div className="invert rounded-lg scale-101 flex justify-center overflow-hidden">
+          <div className="dark:invert rounded-lg scale-101 flex overflow-hidden">
+            <TVFinancials ticker={ticker} height={450} />
+          </div>
+          <div className="dark:invert rounded-lg scale-101 flex justify-center overflow-hidden">
             <TVSymbolProfile ticker={ticker} height={450} />
           </div>
-          <div className="rounded-lg invert scale-101 flex justify-center overflow-hidden">
+          <div className="rounded-lg dark:invert scale-101 flex justify-center overflow-hidden">
             <TVTimelineNews ticker={ticker} height={450} />
           </div>
-                        
         </div>
       )}
     </div>

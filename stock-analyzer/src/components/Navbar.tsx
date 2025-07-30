@@ -38,9 +38,10 @@ export default function Navbar() {
         <h1 className="text-xl font-bold">Stock Analyzer</h1>
       </a>
       <div className="flex items-center gap-2">
-        <a href="/portfolio">
+        <a href="/portfolio" className="hidden sm:block">
           <Button variant="outline">Portfolio</Button>
         </a>
+
         {isAuthed ? (
           <Button variant="destructive" onClick={handleLogout}>
             Logout
