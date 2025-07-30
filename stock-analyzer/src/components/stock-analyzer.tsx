@@ -12,9 +12,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import StockLinks from "./stock-links";
-import TradingViewWidget from "./trading-view";
+import TVAdvancedChart from "./trading-view";
 import { Maximize2 } from "lucide-react";
 import { marked } from "marked";
+import TradingViewWidgetSMA from "./charts/SMAindex";
+import { toast } from "sonner";
+import TVTimelineNews from "./charts/TVTimelineNews";
+import TVTickerTape from "./charts/TVTickerTape";
+import TVTechnicalAnalysis from "./charts/TVTechnicalAnalysis";
+import TVFinancials from "./charts/TVFinancials";
+import TVSymbolInfo from "./charts/TVSymbolInfo";
+import TVSymbolProfile from "./charts/TVSymbolProfile";
 
 const renderMarkdown = (md: string) => marked(md || "_No data found._");
 
@@ -37,6 +45,8 @@ type StockResponse = {
     last_candle: string;
     sma_50: number;
     sma_200: number;
+    ema_crossover: string;
+    squeeze_zone: string;
   };
   fundamentals: {
     pb?: number;
@@ -66,7 +76,6 @@ function parseSections(md: string): ParsedSections {
   const verdictMatch = md.match(/^## \*\*(.+?)\*\*/m);
   const verdict = verdictMatch?.[1] || "";
 
-  
   const recSplit = md.split("##");
 
   const strengthSplit = md.split("## Strengths");
@@ -75,9 +84,9 @@ function parseSections(md: string): ParsedSections {
 
   return {
     recommendation: (recSplit[1] || "").trim(),
-    strengths: (weaknessSplit?.[0]?.trim() || ""),
-    weaknesses: (fundamentalsSplit?.[0]?.trim() || ""),
-    fundamentals: (fundamentalsSplit?.[1]?.trim() || ""),
+    strengths: weaknessSplit?.[0]?.trim() || "",
+    weaknesses: fundamentalsSplit?.[0]?.trim() || "",
+    fundamentals: fundamentalsSplit?.[1]?.trim() || "",
     verdict: verdict.toUpperCase(),
   };
 }
@@ -98,6 +107,7 @@ export default function StockAnalyzer() {
   const [riskProfile, setRiskProfile] = useState("");
   const [data, setData] = useState<StockResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showFinancials, setShowFinancials] = useState(false);
 
   const sections: ParsedSections = data
     ? parseSections(data.ai_analysis)
@@ -127,7 +137,10 @@ export default function StockAnalyzer() {
         process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
       const res = await fetch(`${baseUrl}/analysis/?${query}`);
 
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) {
+        toast.error("Failed to fetch stock data. Please try again.");
+        throw new Error("Failed to fetch");
+      }
       const result = await res.json();
       setData(result);
     } catch (e) {
@@ -148,8 +161,11 @@ export default function StockAnalyzer() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-6">
-      <div className="sticky top-0 z-50 bg-background py-2 border-b">
+      <div className="fixed left-5 top-1/2 -translate-y-1/2 z-50">
         <StockLinks ticker={ticker} />
+      </div>
+      <div className="mb-4 invert scale-[1] rounded-md overflow-hidden">
+        <TVTickerTape />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -208,17 +224,17 @@ export default function StockAnalyzer() {
                       <Maximize2 className="w-4 h-4" />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="z-50 bg-black/90 backdrop-blur-md w-screen h-screen max-w-none max-h-none rounded-none overflow-hidden">
+                  <DialogContent className="!max-w-none !w-screen !h-screen z-50 bg-black/90 backdrop-blur-md rounded-none overflow-hidden">
                     <DialogTitle className="sr-only">
                       Fullscreen Chart
                     </DialogTitle>
-                    <div className="w-full h-full">
-                      <TradingViewWidget ticker={ticker} height={height} />
+                    <div className=" h-full">
+                      <TVAdvancedChart ticker={ticker} height={height} />
                     </div>
                   </DialogContent>
                 </Dialog>
               </div>
-              <TradingViewWidget ticker={ticker} height={400} />
+              <TVAdvancedChart ticker={ticker} height={400} />
             </CardContent>
           </Card>
 
@@ -305,6 +321,16 @@ export default function StockAnalyzer() {
                         <strong>Trend Zone:</strong> {data.technical.trend_zone}
                       </p>
                       <p>
+                        Crossover:{" "}
+                        <strong>{data.technical.ema_crossover}</strong>
+                      </p>
+
+                      <p>
+                        Squeeze Zone:{" "}
+                        <strong>{data.technical.squeeze_zone}</strong>
+                      </p>
+
+                      <p>
                         <strong>Last Candle:</strong>{" "}
                         {data.technical.last_candle}
                       </p>
@@ -323,33 +349,44 @@ export default function StockAnalyzer() {
                       </p>
                       <p>
                         <strong>Trailing P/E:</strong>{" "}
-                        {data.fundamentals?.pe?.toFixed(2) ?? "N/A"}
+                        {typeof data.fundamentals?.pe === "number"
+                          ? data.fundamentals.pe.toFixed(2)
+                          : "N/A"}
                       </p>
-                      <p>
+                        <p>
                         <strong>Forward P/E:</strong>{" "}
-                        {data.fundamentals?.forward_pe?.toFixed(2) ?? "N/A"}
-                      </p>
-                      <p>
+                        {typeof data.fundamentals?.forward_pe === "number"
+                          ? data.fundamentals.forward_pe.toFixed(2)
+                          : "N/A"}
+                        </p>
+                        <p>
                         <strong>Market Cap:</strong>{" "}
-                        {formatMarketCap(data.fundamentals?.market_cap)}
-                      </p>
-                      <p>
+                        {typeof data.fundamentals?.market_cap === "number"
+                          ? formatMarketCap(data.fundamentals.market_cap)
+                          : "N/A"}
+                        </p>
+                        <p>
                         <strong>Earnings Growth:</strong>{" "}
-                        {data.fundamentals?.earnings_growth ?? "N/A"}
-                      </p>
-                      <p>
+                        {typeof data.fundamentals?.earnings_growth === "number"
+                          ? data.fundamentals.earnings_growth
+                          : "N/A"}
+                        </p>
+                        <p>
                         <strong>Revenue Growth:</strong>{" "}
-                        {data.fundamentals?.revenue_growth ?? "N/A"}
-                      </p>
+                        {typeof data.fundamentals?.revenue_growth === "number"
+                          ? data.fundamentals.revenue_growth
+                          : "N/A"}
+                        </p>
                     </div>
                   </div>
 
                   {/* News Sentiment */}
-                  <div className="pt-4 border-t">
-                    <h3 className="font-semibold text-lg  mb-1">
+                    <div className="pt-4 border-t">
+                    <h3 className="font-semibold text-lg mb-1">
                       News Sentiment
                     </h3>
-                    <div className="text-sm  flex gap-4">
+                    {data.news && data.news.sentiment_counts ? (
+                      <div className="text-sm flex gap-4">
                       <span>
                         🟢 Positive: {data.news.sentiment_counts.positive || 0}
                       </span>
@@ -359,8 +396,13 @@ export default function StockAnalyzer() {
                       <span>
                         🔴 Negative: {data.news.sentiment_counts.negative || 0}
                       </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                      News sentiment data not available.
+                      </div>
+                    )}
                     </div>
-                  </div>
 
                   {/* Scores */}
                   <div className="pt-4 border-t">
@@ -381,6 +423,23 @@ export default function StockAnalyzer() {
               </Card>
             </TabsContent>
           </Tabs>
+          <div className="overflow-hidden invert rounded-lg scale-101 flex">
+            <div className="w-full">
+              <TVTechnicalAnalysis ticker={ticker} height={450} />
+            </div>
+          </div>
+  
+
+            <div className="invert rounded-lg scale-101 flex overflow-hidden">
+              <TVFinancials ticker={ticker} height={450} />
+            </div>
+          <div className="invert rounded-lg scale-101 flex justify-center overflow-hidden">
+            <TVSymbolProfile ticker={ticker} height={450} />
+          </div>
+          <div className="rounded-lg invert scale-101 flex justify-center overflow-hidden">
+            <TVTimelineNews ticker={ticker} height={450} />
+          </div>
+                        
         </div>
       )}
     </div>

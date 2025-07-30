@@ -1,4 +1,4 @@
-def build_prompt(ticker, scores, context, peer_comment, meta, technicals=None):
+def build_prompt(ticker, scores, context, peer_comment, meta, technicals=None, fundamentals=None):
     tech_section = ""
     if technicals:
         tech_section = f"""
@@ -13,6 +13,28 @@ Technical Indicators:
 • Stochastic RSI: {technicals['stochastic_rsi']}
 • Volatility Index: {technicals['volatility_index']} ({technicals['squeeze_zone']})
 • Volume Today: {technicals['volume_today']}
+"""
+
+    fund_section = ""
+    if fundamentals:
+        fund_section = f"""
+Fundamental Indicators:
+• P/E Ratio: {fundamentals['pe_ratio']}
+• P/B Ratio: {fundamentals['pb_ratio']}
+• Market Cap: {fundamentals['market_cap']}
+• Dividend Yield: {fundamentals['dividend_yield']}
+• Revenue Growth: {fundamentals['revenue_growth']}
+• Earnings Growth: {fundamentals['earnings_growth']}
+• Free Cash Flow: {fundamentals['free_cash_flow']}
+• Debt to Equity: {fundamentals['debt_to_equity']}
+• Return on Equity: {fundamentals['return_on_equity']}
+• 52-Week Low: {fundamentals['low52']}
+• 52-Week High: {fundamentals['high52']}
+• Bollinger Upper: {fundamentals['bb_upper']}
+• Bollinger Lower: {fundamentals['bb_lower']}
+• 30-Day Resistance: {fundamentals['resistance_30d']}
+• Next Earnings Date: {fundamentals['next_earnings']}
+
 """
 
     return f"""
@@ -71,11 +93,12 @@ Scores:
 Meta:
 • Term: {meta.get('term')}
 • Penny Stock: {meta.get('penny_flag')}
-• Age: {meta.get('age')}
+• Age: {meta.get('age')} If investor is young, allow more risk.
 • Risk Profile: {meta.get('risk_profile')}
 
 {context}
 {peer_comment}
 
 {tech_section}
+{fund_section}
 """

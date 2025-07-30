@@ -1,6 +1,6 @@
 // src/hooks/useAuth.ts
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+
 
 export function useAuth() {
   const router = useRouter();
@@ -15,7 +15,6 @@ export function useAuth() {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Registration failed");
-    toast.success("Registered!");
     router.push("/login");
   }
 
@@ -31,7 +30,6 @@ export function useAuth() {
     if (!res.ok) throw new Error(data.error || "Login failed");
 
     localStorage.setItem("token", data.token); // optionally store
-    toast.success("Logged in!");
     router.push("/portfolio");
   }
 

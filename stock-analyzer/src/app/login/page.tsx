@@ -15,7 +15,7 @@ export default function LoginPage() {
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
-      router.push("/portfolio");
+      router.push("/");
     }
   }, []);
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
       await login(email, password); // <-- actual backend call
       toast.success("Logged in successfully");
       // Optionally redirect or perform other actions
-      router.push("/portfolio");
+      router.push("/");
     } catch (err: any) {
       toast.error(err.message || "Login failed");
     }

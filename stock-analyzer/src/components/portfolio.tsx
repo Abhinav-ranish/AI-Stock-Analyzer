@@ -32,6 +32,12 @@ async function fetchCompanyInfo(ticker: string) {
 }
 
 export default function PortfolioTickerTable() {
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -143,6 +149,11 @@ export default function PortfolioTickerTable() {
     { accessorKey: "name", header: "Industry" },
     { accessorKey: "price", header: "Company Price" },
     {
+      accessorKey: "frequency",
+      header: "Reminder",
+      enableHiding: true, // ✅ makes it togglable in the dropdown
+    },
+    {
       header: "Actions",
       cell: ({ row }) => (
         <Button
@@ -165,9 +176,11 @@ export default function PortfolioTickerTable() {
           onChange={(e) => setInput(e.target.value)}
           className="max-w-xs"
         />
-        <Button onClick={handleAdd} disabled={!token}>
-          Add Ticker
-        </Button>
+        {hasMounted && (
+          <Button onClick={handleAdd} disabled={!token}>
+            Add Ticker
+          </Button>
+        )}
       </div>
       <DataTable
         columns={columns}

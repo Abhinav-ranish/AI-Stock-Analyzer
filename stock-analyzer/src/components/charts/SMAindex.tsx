@@ -6,7 +6,7 @@ type Props = {
   height?: number;
 };
 
-export default function TVAdvancedChart({ ticker, height = 500}: Props) {
+export default function TradingViewWidget({ ticker, height = 600 }: Props) {
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,24 +19,21 @@ export default function TVAdvancedChart({ ticker, height = 500}: Props) {
     script.innerHTML = JSON.stringify({
       symbol: ticker,
       interval: "D",
-      autosize: true,
       timezone: "Etc/UTC",
       theme: "dark",
       style: "1",
       locale: "en",
-      backgroundColor: "#0F0F0F",
-      gridColor: "rgba(242, 242, 242, 0.06)",
+      enable_publishing: false,
       hide_top_toolbar: false,
-      hide_side_toolbar: true,
-      hide_volume: false,
-      allow_symbol_change: true,
-      calendar: false,
-      studies: ["Moving Average Ribbon@tv-basicstudies"],
+      allow_symbol_change: false,
+      width: "100%",
+      height,
+      studies: ["Moving Average Ribbon"], // 👈 replace with actual username@title
     });
 
     container.current.innerHTML = "";
     container.current.appendChild(script);
-  }, [ticker]);
+  }, [ticker, height]);
 
   return <div ref={container} className="w-full" style={{ height }} />;
 }

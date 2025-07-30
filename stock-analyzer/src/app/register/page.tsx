@@ -18,7 +18,7 @@ export default function RegisterPage() {
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
-      router.push("/portfolio");
+      router.push("/");
     }
   }, []);
 
