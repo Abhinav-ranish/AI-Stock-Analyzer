@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from groq import Groq
+from collections import defaultdict
 from textblob import TextBlob
 from sklearn.linear_model import LinearRegression
 import ollama
@@ -51,6 +53,21 @@ NEWS_API_KEY = os.getenv("NEWSAPI_KEY")
 
 app = Flask(__name__)
 CORS(app)
+
+# Simple in-memory rate limiter
+RATE_LIMIT_WINDOW = 60  # seconds
+RATE_LIMIT_MAX_REQUESTS = 5
+_request_log = defaultdict(list)
+
+def is_rate_limited(ip: str) -> bool:
+    now = time.time()
+    timestamps = _request_log[ip]
+    # Remove timestamps outside of window
+    _request_log[ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW]
+    if len(_request_log[ip]) >= RATE_LIMIT_MAX_REQUESTS:
+        return True
+    _request_log[ip].append(now)
+    return False
 
 
 def get_stock_data(ticker):
@@ -302,6 +319,49 @@ def retrieve_similar_stocks(ticker):
     # Exclude the queried ticker from the results if necessary
     similar_tickers = [res["ticker"] for res in results if res["ticker"] != ticker]
     return similar_tickers
+
+
+@app.route('/groq', methods=['POST'])
+def call_groq():
+    """Proxy question/answer requests to the Groq API."""
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or 'unknown')
+    if is_rate_limited(ip):
+        return jsonify({'error': 'Too many requests. Slow down.'}), 429
+
+    data = request.get_json() or {}
+    question = data.get('question')
+    context = data.get('context')
+
+    if not question or not isinstance(question, str):
+        return jsonify({'error': 'Invalid question'}), 400
+
+    base_context = """""".strip()
+    merged_context = (
+        f"{base_context}\n\nExtra details:\n{context}"
+        if context and isinstance(context, str)
+        else base_context
+    )
+
+    messages = [
+        {"role": "system", "content": "B"},
+        {"role": "system", "content": merged_context},
+        {"role": "user", "content": question},
+    ]
+
+    try:
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        completion = client.chat.completions.create(
+            model='llama-3.3-70b-versatile',
+            messages=messages,
+        )
+        answer = (
+            completion.choices[0].message.content
+            if completion.choices else ""
+        )
+        return jsonify({"answer": answer})
+    except Exception as err:
+        print('Groq error:', err)
+        return jsonify({'error': str(err)}), 500
 
 
 @app.route('/')
