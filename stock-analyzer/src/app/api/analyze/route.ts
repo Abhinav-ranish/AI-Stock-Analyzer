@@ -21,6 +21,7 @@ import {
 } from "@/lib/scoring";
 import { buildPrompt } from "@/lib/prompt";
 import { getGeminiAnalysis } from "@/lib/gemini";
+import { upsertAndFindPeers } from "@/lib/embeddings";
 
 function round(v: number, d = 4): number {
   return Math.round(v * 10 ** d) / 10 ** d;
@@ -159,11 +160,26 @@ export async function GET(req: NextRequest) {
       volumeToday: volumes[volumes.length - 1] || 0,
     };
 
+    // Find similar stocks via vector embeddings (pgvector)
+    const peerTickers = await upsertAndFindPeers({
+      ticker,
+      sector: fund.sector,
+      industry: fund.industry,
+      pe: fund.pe,
+      forward_pe: fund.forward_pe,
+      pb: fund.pb,
+      market_cap: fund.market_cap,
+      earnings_growth: fund.earnings_growth,
+      revenue_growth: fund.revenue_growth,
+      return_on_equity: fund.return_on_equity,
+      debt_to_equity: fund.debt_to_equity,
+    });
+
     const prompt = buildPrompt(
       ticker,
       scores,
       context,
-      [], // peer tickers (will be added with pgvector in Phase 4)
+      peerTickers,
       { term, penny, age, riskProfile },
       technicals
     );
@@ -200,7 +216,12 @@ export async function GET(req: NextRequest) {
         adx,
         ema_crossover: emaSignal,
       },
+      peer_tickers: peerTickers,
       ai_analysis: summary,
+    }, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+      },
     });
   } catch (e: any) {
     console.error("[ANALYZE]", e);

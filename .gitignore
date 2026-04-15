@@ -31,3 +31,4 @@ yarn-error.log*
 /.claude
 /supabase-backups
 /.claude-flow
+/stock-analyzer/.agents

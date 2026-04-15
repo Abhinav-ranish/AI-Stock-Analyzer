@@ -98,6 +98,10 @@ export async function GET(req: NextRequest) {
       next_earnings: calendar.earningsDate?.[0]
         ? String(calendar.earningsDate[0])
         : null,
+    }, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+      },
     });
   } catch (e: any) {
     console.error("[FUNDAMENTALS]", e.message);
