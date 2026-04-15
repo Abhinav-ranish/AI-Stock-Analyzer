@@ -1,51 +1,53 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 export default function RegisterPage() {
-  const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const { user, loading, register } = useAuth();
 
-  const { register } = useAuth(); // <-- from your hook
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      router.push("/");
-    }
-  }, []);
+  if (loading) return null;
+  if (user) {
+    return (
+      <div className="max-w-md mx-auto py-10">
+        <p className="text-sm text-muted-foreground">You are already logged in.</p>
+      </div>
+    );
+  }
 
   const handleRegister = async () => {
-    if (!nickname || !email) {
-      toast.error("Nickname and Email are required.");
+    const result = registerSchema.safeParse({ email, password });
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
       return;
     }
 
+    setSubmitting(true);
     try {
-      await register(nickname, email, password); // actual backend call
-      toast.success("Registered successfully");
-      // Optionally redirect or perform other actions
-      router.push("/login");
+      await register(email, password);
+      toast.success("Registered successfully. Please check your email to confirm.");
     } catch (err: any) {
       toast.error(err.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="max-w-md mx-auto py-10 space-y-4">
       <h1 className="text-2xl font-bold">Register</h1>
-      <Input
-        placeholder="Nickname"
-        value={nickname}
-        onChange={(e) => setNickname(e.target.value)}
-      />
       <Input
         type="email"
         placeholder="Email"
@@ -54,12 +56,12 @@ export default function RegisterPage() {
       />
       <Input
         type="password"
-        placeholder="Password (optional)"
+        placeholder="Password (min 6 characters)"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
-      <Button className="w-full" onClick={handleRegister}>
-        Register
+      <Button className="w-full" onClick={handleRegister} disabled={submitting}>
+        {submitting ? "Registering..." : "Register"}
       </Button>
     </div>
   );

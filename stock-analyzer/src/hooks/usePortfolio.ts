@@ -1,59 +1,96 @@
+"use client";
+
 import { useState, useEffect } from "react";
+import { getSupabase } from "@/lib/supabase";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
-const API = `${baseUrl}/portfolio`;
+export type PortfolioEntry = {
+  id: string;
+  ticker: string;
+  frequency: string;
+  user_id: string;
+};
 
-export function usePortfolio(token: string) {
-  const [tickers, setTickers] = useState<any[]>([]);
+export function usePortfolio(userId: string | undefined) {
+  const [tickers, setTickers] = useState<PortfolioEntry[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const authHeader = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
+  const [error, setError] = useState<string | null>(null);
 
   const fetchTickers = async () => {
-    const res = await fetch(`${API}`, { headers: authHeader });
-    const data = await res.json();
-    setTickers(data || []);
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const { data, error: fetchError } = await getSupabase()
+      .from("portfolio")
+      .select("*")
+      .eq("user_id", userId)
+      .order("ticker", { ascending: true });
+
+    if (fetchError) {
+      setError(fetchError.message);
+      setTickers([]);
+    } else {
+      setTickers(data || []);
+      setError(null);
+    }
     setLoading(false);
   };
 
   const addTicker = async (ticker: string, frequency: string) => {
-    const res = await fetch(API, {
-      method: "POST",
-      headers: authHeader,
-      body: JSON.stringify({ ticker, frequency }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Add failed");
+    if (!userId) throw new Error("Not authenticated");
+
+    const { data: existing } = await getSupabase()
+      .from("portfolio")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("ticker", ticker)
+      .single();
+
+    if (existing) throw new Error("Stock already exists");
+
+    const { data, error: insertError } = await getSupabase()
+      .from("portfolio")
+      .insert({ user_id: userId, ticker, frequency })
+      .select()
+      .single();
+
+    if (insertError) throw new Error(insertError.message);
     setTickers((prev) => [...prev, data]);
+    return data;
   };
 
   const deleteTicker = async (ticker: string) => {
-    const res = await fetch(`${API}/${ticker}`, {
-      method: "DELETE",
-      headers: authHeader,
-    });
-    if (!res.ok) throw new Error("Delete failed");
+    if (!userId) throw new Error("Not authenticated");
+
+    const { error: deleteError } = await getSupabase()
+      .from("portfolio")
+      .delete()
+      .eq("user_id", userId)
+      .eq("ticker", ticker);
+
+    if (deleteError) throw new Error(deleteError.message);
     setTickers((prev) => prev.filter((t) => t.ticker !== ticker));
   };
 
   const updateFrequency = async (ticker: string, frequency: string) => {
-    const res = await fetch(API, {
-      method: "PATCH",
-      headers: authHeader,
-      body: JSON.stringify({ ticker, frequency }),
-    });
-    if (!res.ok) throw new Error("Update failed");
+    if (!userId) throw new Error("Not authenticated");
+
+    const { error: updateError } = await getSupabase()
+      .from("portfolio")
+      .update({ frequency })
+      .eq("user_id", userId)
+      .eq("ticker", ticker);
+
+    if (updateError) throw new Error(updateError.message);
     setTickers((prev) =>
       prev.map((t) => (t.ticker === ticker ? { ...t, frequency } : t))
     );
   };
 
   useEffect(() => {
-    if (token) fetchTickers();
-  }, [token]);
+    fetchTickers();
+  }, [userId]);
 
-  return { tickers, loading, addTicker, deleteTicker, updateFrequency };
+  return { tickers, loading, error, addTicker, deleteTicker, updateFrequency };
 }

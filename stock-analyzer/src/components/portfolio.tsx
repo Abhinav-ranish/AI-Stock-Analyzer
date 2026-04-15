@@ -31,22 +31,22 @@ async function fetchCompanyInfo(ticker: string) {
   };
 }
 
-export default function PortfolioTickerTable() {
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  const { tickers, loading, addTicker, deleteTicker } = usePortfolio(
-    token || ""
-  );
+export default function PortfolioTickerTable({
+  userId,
+}: {
+  userId: string | undefined;
+}) {
+  const { tickers, loading, error, addTicker, deleteTicker } =
+    usePortfolio(userId);
 
   const [input, setInput] = useState("");
   const [data, setData] = useState<TickerRow[]>([]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(`Portfolio error: ${error}`);
+    }
+  }, [error]);
 
   useEffect(() => {
     if (!loading && tickers.length) {
@@ -82,7 +82,7 @@ export default function PortfolioTickerTable() {
 
   const handleAdd = async () => {
     const ticker = input.trim().toUpperCase();
-    if (!ticker || !token) return;
+    if (!ticker || !userId) return;
 
     setInput("");
 
@@ -97,31 +97,15 @@ export default function PortfolioTickerTable() {
     setData((prev) => [...prev, placeholder]);
 
     try {
-      // ✅ Validate ticker before saving to backend
       const { name, price } = await fetchCompanyInfo(ticker);
-
-      // ✅ Save only if valid
       await addTicker(ticker, "weekly");
-
-      // ✅ Update with fetched info
       setData((prev) =>
         prev.map((row) =>
           row.ticker === ticker ? { ...row, name, price } : row
         )
       );
-    } catch (err) {
-      toast.error("Invalid ticker or backend error");
-
-      // Show error visually
-      setData((prev) =>
-        prev.map((row) =>
-          row.ticker === ticker
-            ? { ...row, name: "Error", price: "Error" }
-            : row
-        )
-      );
-
-      // Remove the row after delay
+    } catch (err: any) {
+      toast.error(err.message || "Invalid ticker or backend error");
       setTimeout(() => {
         setData((prev) =>
           prev
@@ -151,7 +135,7 @@ export default function PortfolioTickerTable() {
     {
       accessorKey: "frequency",
       header: "Reminder",
-      enableHiding: true, // ✅ makes it togglable in the dropdown
+      enableHiding: true,
     },
     {
       header: "Actions",
@@ -176,11 +160,9 @@ export default function PortfolioTickerTable() {
           onChange={(e) => setInput(e.target.value)}
           className="max-w-xs"
         />
-        {hasMounted && (
-          <Button onClick={handleAdd} disabled={!token}>
-            Add Ticker
-          </Button>
-        )}
+        <Button onClick={handleAdd} disabled={!userId}>
+          Add Ticker
+        </Button>
       </div>
       <DataTable
         columns={columns}

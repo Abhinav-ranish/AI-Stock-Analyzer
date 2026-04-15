@@ -1,37 +1,54 @@
-// src/hooks/useAuth.ts
-import { useRouter } from "next/navigation";
+"use client";
 
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getSupabase } from "@/lib/supabase";
+import type { User, Session } from "@supabase/supabase-js";
 
 export function useAuth() {
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  async function register(nickname: string, email: string, password?: string) {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
-    const res = await fetch(`${baseUrl}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nickname, email, password }),
+  useEffect(() => {
+    getSupabase().auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Registration failed");
+    const {
+      data: { subscription },
+    } = getSupabase().auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function register(email: string, password: string) {
+    const { error } = await getSupabase().auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
     router.push("/login");
   }
 
-  async function login(email: string, password?: string) {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
-    const res = await fetch(`${baseUrl}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+  async function login(email: string, password: string) {
+    const { error } = await getSupabase().auth.signInWithPassword({
+      email,
+      password,
     });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Login failed");
-
-    localStorage.setItem("token", data.token); // optionally store
+    if (error) throw new Error(error.message);
     router.push("/portfolio");
   }
 
-  return { register, login };
+  async function logout() {
+    await getSupabase().auth.signOut();
+    setUser(null);
+    setSession(null);
+    router.push("/");
+  }
+
+  return { user, session, loading, register, login, logout };
 }

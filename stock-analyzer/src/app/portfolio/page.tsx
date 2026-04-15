@@ -1,24 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import PortfolioTickerTable from "@/components/portfolio";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function PortfolioPage() {
-  const [token, setToken] = useState<string | null>(null);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    setToken(localStorage.getItem("token"));
-  }, []);
+  if (loading) return null;
 
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">My Portfolio Watchlist</h1>
-      {!token && (
+      {!user && (
         <p className="text-sm text-muted-foreground">
           Please login to add or remove tickers.
         </p>
       )}
-      <PortfolioTickerTable />
+      <PortfolioTickerTable userId={user?.id} />
     </main>
   );
 }
