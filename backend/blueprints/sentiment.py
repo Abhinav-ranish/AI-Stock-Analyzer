@@ -142,8 +142,6 @@ def get_filtered_news(ticker):
     except requests.RequestException as e:
         return jsonify({"error": f"News fetch failed: {e}"}), 502
 
-    print("NEWS_API_KEY loaded:", NEWS_API_KEY[:5] + "..." if NEWS_API_KEY else "MISSING")
-
     return jsonify({
         "sentiment_counts": {
             "positive": counts["positive"],

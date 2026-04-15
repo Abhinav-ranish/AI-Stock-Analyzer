@@ -24,8 +24,8 @@ def register():
     nickname = data.get("nickname")
     password = data.get("password")
 
-    if not email or not nickname:
-        return jsonify({"error": "Email and nickname required"}), 400
+    if not email or not nickname or not password:
+        return jsonify({"error": "Email, nickname, and password are required"}), 400
 
     existing = supabase.table("users").select("id").eq("email", email).execute()
     if existing.data:

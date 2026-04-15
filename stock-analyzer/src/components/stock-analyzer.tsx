@@ -14,7 +14,8 @@ import {
 import StockLinks from "./stock-links";
 import TVAdvancedChart from "./trading-view";
 import { Maximize2 } from "lucide-react";
-import { marked } from "marked";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import TradingViewWidgetSMA from "./charts/SMAindex";
 import { toast } from "sonner";
 import TVTimelineNews from "./charts/TVTimelineNews";
@@ -24,8 +25,6 @@ import TVFinancials from "./charts/TVFinancials";
 import TVSymbolInfo from "./charts/TVSymbolInfo";
 import TVSymbolProfile from "./charts/TVSymbolProfile";
 import TickerSearchInput from "./Search-bar";
-
-const renderMarkdown = (md: string) => marked(md || "_No data found._");
 
 type StockResponse = {
   ticker: string;
@@ -120,8 +119,9 @@ export default function StockAnalyzer() {
         verdict: "",
       };
 
-  const cleanTicker = ticker.trim().toUpperCase();
-  if (cleanTicker !== ticker) setTicker(cleanTicker);
+  const handleTickerChange = (value: string) => {
+    setTicker(value.trim().toUpperCase());
+  };
 
   const fetchStockData = async () => {
     if (!ticker) return;
@@ -170,7 +170,7 @@ export default function StockAnalyzer() {
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <TickerSearchInput value={ticker} onChange={setTicker} />
+        <TickerSearchInput value={ticker} onChange={handleTickerChange} />
         <Button onClick={fetchStockData} disabled={loading}>
           {loading ? "Analyzing..." : "Analyze"}
         </Button>
@@ -272,35 +272,27 @@ export default function StockAnalyzer() {
                       </TabsList>
                     </div>
                     <TabsContent value="rec">
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: marked(sections.recommendation),
-                        }}
-                      />
+                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                        {sections.recommendation || "_No data found._"}
+                      </ReactMarkdown>
                     </TabsContent>
 
                     <TabsContent value="strengths">
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: marked(sections.strengths),
-                        }}
-                      />
+                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                        {sections.strengths || "_No data found._"}
+                      </ReactMarkdown>
                     </TabsContent>
 
                     <TabsContent value="weaknesses">
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: marked(sections.weaknesses),
-                        }}
-                      />
+                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                        {sections.weaknesses || "_No data found._"}
+                      </ReactMarkdown>
                     </TabsContent>
 
                     <TabsContent value="fundamentals">
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: marked(sections.fundamentals),
-                        }}
-                      />
+                      <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                        {sections.fundamentals || "_No data found._"}
+                      </ReactMarkdown>
                     </TabsContent>
                   </Tabs>
                 </CardContent>

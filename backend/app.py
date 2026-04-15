@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()  # this loads .env vars into os.environ
 
+import os
 from flask import Flask
 from flask_cors import CORS
 
@@ -14,7 +15,10 @@ from blueprints.portfolio import portfolio_bp
 from blueprints.auth import auth_bp
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=[
+    "http://localhost:3000",
+    os.environ.get("FRONTEND_URL", "https://stock.aranish.uk"),
+])
 for bp in (prompt_bp, fund_bp, ins_bp, tech_bp, news_bp, an_bp, portfolio_bp, auth_bp):
     app.register_blueprint(bp)
 

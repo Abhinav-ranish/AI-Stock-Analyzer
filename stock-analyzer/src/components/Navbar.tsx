@@ -3,6 +3,7 @@
 import ModeToggle from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Navbar() {
@@ -34,13 +35,13 @@ export default function Navbar() {
 
   return (
     <nav className="flex justify-between items-center mb-4 px-6 py-3 border-b bg-background sticky top-0 z-50">
-      <a href="/">
+      <Link href="/">
         <h1 className="text-xl font-bold">Stock Analyzer</h1>
-      </a>
+      </Link>
       <div className="flex items-center gap-2">
-        <a href="/portfolio" className="hidden sm:block">
+        <Link href="/portfolio" className="hidden sm:block">
           <Button variant="outline">Portfolio</Button>
-        </a>
+        </Link>
 
         {isAuthed ? (
           <Button variant="destructive" onClick={handleLogout}>
@@ -48,12 +49,12 @@ export default function Navbar() {
           </Button>
         ) : (
           <>
-            <a href="/register">
+            <Link href="/register">
               <Button variant="outline">Register</Button>
-            </a>
-            <a href="/login">
+            </Link>
+            <Link href="/login">
               <Button variant="outline">Login</Button>
-            </a>
+            </Link>
           </>
         )}
         <ModeToggle />
