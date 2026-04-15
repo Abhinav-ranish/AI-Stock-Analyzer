@@ -134,9 +134,7 @@ export default function StockAnalyzer() {
         ...(age ? { age: String(age) } : {}),
         ...(riskProfile ? { risk_profile: riskProfile } : {}),
       });
-      const baseUrl =
-        process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
-      const res = await fetch(`${baseUrl}/analysis/?${query}`);
+      const res = await fetch(`/api/analyze?${query}`);
 
       if (!res.ok) {
         toast.error("Failed to fetch stock data. Please try again.");

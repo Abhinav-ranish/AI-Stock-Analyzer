@@ -18,8 +18,7 @@ type TickerRow = {
 };
 
 async function fetchCompanyInfo(ticker: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.aranish.uk";
-  const res = await fetch(`${baseUrl}/fundamentals/${ticker}`);
+  const res = await fetch(`/api/fundamentals?ticker=${ticker}`);
   if (!res.ok) throw new Error("Invalid ticker");
   const data = await res.json();
   return {
