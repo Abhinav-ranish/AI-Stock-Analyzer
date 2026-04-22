@@ -63,6 +63,7 @@ type StockResponse = {
     sentiment_counts: Record<string, number>;
     top_stories: string[];
   };
+  insider_trades?: any[];
 };
 
 type ParsedSections = {
