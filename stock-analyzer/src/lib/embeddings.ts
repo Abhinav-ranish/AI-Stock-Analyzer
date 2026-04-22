@@ -107,7 +107,7 @@ export async function upsertAndFindPeers(
 
     if (!data) return [];
 
-    return data.map((row) => row.ticker);
+    return data.map((row: { ticker: string }) => row.ticker);
   } catch (e) {
     console.error("[EMBEDDINGS]", e);
     return [];
