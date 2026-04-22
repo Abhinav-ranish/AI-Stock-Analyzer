@@ -238,17 +238,16 @@ export default function StockAnalyzer() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
           
           <div className="xl:col-span-12 w-full">
-            <Card className="bg-background border-border/50 shadow-sm overflow-hidden rounded-xl">
-              <CardContent className="p-0">
-                <div className="p-3 border-b border-border/50 flex justify-between items-center bg-muted/20">
-                  <h2 className="font-bold text-xs uppercase tracking-widest">Main Technical View</h2>
+            <Card className="bg-background border-border/50 shadow-sm overflow-hidden rounded-xl relative group">
+              <CardContent className="p-1">
+                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-muted transition-colors">
-                        <Maximize2 className="w-3.5 h-3.5" />
+                      <Button size="icon" variant="ghost" className="h-9 w-9 rounded-md bg-background/50 hover:bg-background/80 backdrop-blur-sm border border-border/50 text-muted-foreground hover:text-foreground shadow-sm transition-all">
+                        <Maximize2 className="w-4 h-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="!max-w-none !w-screen !h-screen z-50 bg-background/95 backdrop-blur-xl rounded-none border-none">
+                    <DialogContent className="!max-w-none !w-screen !h-screen z-50 bg-background/95 backdrop-blur-xl rounded-none border-none p-0">
                       <DialogTitle className="sr-only">Fullscreen Chart</DialogTitle>
                       <div className="h-full w-full pt-10">
                         <TVAdvancedChart ticker={ticker} height={height} />
@@ -256,9 +255,7 @@ export default function StockAnalyzer() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <div className="p-1">
-                   <TVAdvancedChart ticker={ticker} height={500} />
-                </div>
+                <TVAdvancedChart ticker={ticker} height={550} />
               </CardContent>
             </Card>
           </div>
