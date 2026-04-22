@@ -16,7 +16,7 @@ export default function TVSymbolInfo({ ticker }: { ticker: string }) {
       width: "100%",
       locale: "en",
       colorTheme: "light",
-      isTransparent: false,
+      isTransparent: true,
     });
 
     ref.current.innerHTML = "";

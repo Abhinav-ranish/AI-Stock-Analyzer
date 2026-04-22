@@ -60,7 +60,7 @@ function buildEmbeddingText(profile: StockProfile): string {
 
 async function getEmbedding(text: string): Promise<number[]> {
   const model = getGenAI().getGenerativeModel({
-    model: "text-embedding-004",
+    model: "text-embedding-002",
   });
   const result = await model.embedContent(text);
   return result.embedding.values;

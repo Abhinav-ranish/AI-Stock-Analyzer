@@ -14,7 +14,7 @@ export default function TVSymbolProfile({ ticker, height = 390 }: { ticker: stri
     script.innerHTML = JSON.stringify({
       symbol: ticker,
       colorTheme: "light",
-      isTransparent: false,
+      isTransparent: true,
       locale: "en",
       width: "100%",
       height,

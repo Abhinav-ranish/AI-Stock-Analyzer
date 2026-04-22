@@ -14,7 +14,7 @@ export default function TVFinancials({ ticker, height = 550 }: { ticker: string;
     script.innerHTML = JSON.stringify({
       symbol: ticker,
       colorTheme: "light",
-      isTransparent: false,
+      isTransparent: true,
       locale: "en",
       displayMode: "regular",
       width: "100%",
