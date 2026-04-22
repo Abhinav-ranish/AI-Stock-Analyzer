@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 export default function TVTechnicalAnalysis({ ticker, height = 450 }: { ticker: string; height?: number }) {
   const { resolvedTheme } = useTheme();
+  if (!resolvedTheme) return null;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

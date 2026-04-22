@@ -9,6 +9,7 @@ type Props = {
 
 export default function TradingViewWidget({ ticker, height = 600 }: Props) {
   const { resolvedTheme } = useTheme();
+  if (!resolvedTheme) return null;
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

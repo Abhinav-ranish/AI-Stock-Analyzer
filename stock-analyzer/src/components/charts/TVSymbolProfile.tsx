@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 export default function TVSymbolProfile({ ticker, height = 390 }: { ticker: string; height?: number }) {
   const { resolvedTheme } = useTheme();
+  if (!resolvedTheme) return null;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

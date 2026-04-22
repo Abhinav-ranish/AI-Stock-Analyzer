@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 export default function TVSymbolInfo({ ticker }: { ticker: string }) {
   const { resolvedTheme } = useTheme();
+  if (!resolvedTheme) return null;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

@@ -20,7 +20,7 @@ import rehypeSanitize from "rehype-sanitize";
 import TradingViewWidgetSMA from "./charts/SMAindex";
 import { toast } from "sonner";
 import TVTimelineNews from "./charts/TVTimelineNews";
-import TVTickerTape from "./charts/TVTickerTape";
+import CustomTickerTape from "./CustomTickerTape";
 import TVTechnicalAnalysis from "./charts/TVTechnicalAnalysis";
 import TVFinancials from "./charts/TVFinancials";
 import TVSymbolInfo from "./charts/TVSymbolInfo";
@@ -165,8 +165,8 @@ export default function StockAnalyzer() {
         <StockLinks ticker={ticker} />
       </div>
 
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-2xl overflow-hidden shadow-lg border border-border/50 bg-background/50 backdrop-blur-md">
-        <TVTickerTape />
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 rounded-2xl overflow-hidden shadow-sm border border-border/50 bg-background/50">
+        <CustomTickerTape />
       </motion.div>
 
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col gap-4 relative z-20">
@@ -180,76 +180,75 @@ export default function StockAnalyzer() {
           </Button>
         </div>
 
-        {/* Parameters Panel Extracted */}
+        </motion.div>
+
         {showFinancials && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-background/40 backdrop-blur-xl border border-border/30 rounded-2xl p-6 shadow-inner overflow-hidden">
-            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wider">Analysis Parameters</h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-              <div className="space-y-2">
-                 <label className="text-sm font-medium">Investment Term</label>
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-muted/30 backdrop-blur-md border border-border/50 rounded-xl p-5 shadow-sm overflow-hidden mb-8">
+            <h3 className="text-xs font-bold mb-3 text-muted-foreground uppercase tracking-widest">Analysis Parameters</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <div className="space-y-1.5">
+                 <label className="text-xs font-semibold uppercase tracking-wide text-foreground/80">Investment Term</label>
                  <select
                   value={term}
                   onChange={(e) => setTerm(e.target.value as "short" | "long")}
-                  className="w-full h-11 bg-background/50 border border-border/50 rounded-lg px-3 hover:border-primary/50 transition-colors focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full h-10 bg-background/80 border border-border/50 rounded-md px-3 text-sm hover:border-primary/50 transition-colors focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
                 >
                   <option value="long">Long Term Horizon</option>
                   <option value="short">Short Term Flip</option>
                 </select>
               </div>
 
-              <div className="flex items-center h-11 px-4 bg-background/50 border border-border/50 rounded-lg hover:border-primary/50 transition-colors">
+              <div className="flex items-center h-10 px-4 bg-background/80 border border-border/50 rounded-md hover:border-primary/50 transition-colors shadow-sm">
                 <label className="text-sm font-medium flex items-center gap-3 cursor-pointer w-full">
                   <input
                     type="checkbox"
                     checked={penny}
                     onChange={(e) => setPenny(e.target.checked)}
-                    className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  Penny Stock Assessment
+                  Penny Stock Scrape
                 </label>
               </div>
 
-              <div className="space-y-2">
-                 <label className="text-sm font-medium">Target Age (Optional)</label>
+              <div className="space-y-1.5">
+                 <label className="text-xs font-semibold uppercase tracking-wide text-foreground/80">Target Age</label>
                 <Input
                   type="number"
                   placeholder="e.g. 35"
                   value={age ?? ""}
                   onChange={(e) => setAge(Number(e.target.value))}
-                  className="h-11 bg-background/50"
+                  className="h-10 bg-background/80 text-sm shadow-sm"
                 />
               </div>
 
-              <div className="space-y-2">
-                 <label className="text-sm font-medium">Risk Tolerance</label>
+              <div className="space-y-1.5">
+                 <label className="text-xs font-semibold uppercase tracking-wide text-foreground/80">Risk Tolerance</label>
                 <Input
                   placeholder="e.g. Aggressive"
                   value={riskProfile}
                   onChange={(e) => setRiskProfile(e.target.value)}
-                  className="h-11 bg-background/50"
+                  className="h-10 bg-background/80 text-sm shadow-sm"
                 />
               </div>
             </div>
           </motion.div>
         )}
-      </motion.div>
 
       {data && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 xl:grid-cols-12 gap-8 mt-10">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
           
-          {/* Main Chart Column */}
           <div className="xl:col-span-12 w-full">
-            <Card className="bg-background/60 backdrop-blur-xl border-white/5 shadow-2xl overflow-hidden rounded-3xl">
+            <Card className="bg-background border-border/50 shadow-sm overflow-hidden rounded-xl">
               <CardContent className="p-0">
-                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/5 dark:bg-white/5">
-                  <h2 className="font-semibold text-sm tracking-wide">Primary Technical View</h2>
+                <div className="p-3 border-b border-border/50 flex justify-between items-center bg-muted/20">
+                  <h2 className="font-bold text-xs uppercase tracking-widest">Main Technical View</h2>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="hover:bg-primary/20 hover:text-primary transition-colors">
-                        <Maximize2 className="w-4 h-4" />
+                      <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-muted transition-colors">
+                        <Maximize2 className="w-3.5 h-3.5" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="!max-w-none !w-screen !h-screen z-50 bg-background/95 backdrop-blur-2xl rounded-none border-none">
+                    <DialogContent className="!max-w-none !w-screen !h-screen z-50 bg-background/95 backdrop-blur-xl rounded-none border-none">
                       <DialogTitle className="sr-only">Fullscreen Chart</DialogTitle>
                       <div className="h-full w-full pt-10">
                         <TVAdvancedChart ticker={ticker} height={height} />
@@ -257,82 +256,92 @@ export default function StockAnalyzer() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <div className="p-2">
+                <div className="p-1">
                    <TVAdvancedChart ticker={ticker} height={500} />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="xl:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-            <Card className="bg-background/60 backdrop-blur-xl border-white/5 shadow-2xl rounded-3xl h-full flex flex-col">
-              <CardContent className="p-6 flex-1 flex flex-col">
+          <div className="xl:col-span-8 w-full">
+            <Card className="bg-background border-border/50 shadow-sm rounded-xl h-full flex flex-col">
+              <CardContent className="p-5 flex-1 flex flex-col">
                 <Tabs defaultValue="rec" className="w-full flex-1 flex flex-col">
-                    <TabsList className="grid grid-cols-4 w-full bg-background/50 p-1 rounded-xl mb-6 border border-white/5">
-                      <TabsTrigger value="rec" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">💡 Recs</TabsTrigger>
-                      <TabsTrigger value="strengths" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">📈 Pros</TabsTrigger>
-                      <TabsTrigger value="weaknesses" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">📉 Cons</TabsTrigger>
-                      <TabsTrigger value="fundamentals" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all">🧠 Logic</TabsTrigger>
+                    <TabsList className="grid grid-cols-4 w-full bg-muted/40 p-1 rounded-md mb-5 border border-border/30">
+                      <TabsTrigger value="rec" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Recommendation</TabsTrigger>
+                      <TabsTrigger value="strengths" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Strengths</TabsTrigger>
+                      <TabsTrigger value="weaknesses" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Weaknesses</TabsTrigger>
+                      <TabsTrigger value="fundamentals" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Analysis</TabsTrigger>
                     </TabsList>
                     
-                    <div className="flex-1 bg-black/5 dark:bg-white/5 rounded-2xl p-6 border border-white/5 prose prose-sm dark:prose-invert max-w-none overflow-y-auto max-h-[500px]">
+                    <div className="flex-1 bg-muted/20 rounded-md p-5 border border-border/30 prose prose-sm dark:prose-invert max-w-none overflow-y-auto max-h-[360px] text-foreground/90">
                       <TabsContent value="rec" className="mt-0">
-                        <h2 className="text-2xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Final Recommendation</h2>
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">Analyst Verdict</h2>
                         <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.recommendation || "_No data generated._"}</ReactMarkdown>
                       </TabsContent>
                       <TabsContent value="strengths" className="mt-0">
-                        <h2 className="text-2xl font-bold mb-4 text-emerald-500">Key Strengths</h2>
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Bull Case</h2>
                         <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.strengths || "_No data generated._"}</ReactMarkdown>
                       </TabsContent>
                       <TabsContent value="weaknesses" className="mt-0">
-                        <h2 className="text-2xl font-bold mb-4 text-rose-500">Risk Factors</h2>
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-rose-600 dark:text-rose-400">Bear Case</h2>
                         <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.weaknesses || "_No data generated._"}</ReactMarkdown>
                       </TabsContent>
                       <TabsContent value="fundamentals" className="mt-0">
-                        <h2 className="text-2xl font-bold mb-4 text-blue-500">Fundamental Analysis</h2>
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-blue-600 dark:text-blue-400">Core Fundamentals</h2>
                         <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.fundamentals || "_No data generated._"}</ReactMarkdown>
                       </TabsContent>
                     </div>
                 </Tabs>
               </CardContent>
             </Card>
+          </div>
 
-            <Card className="bg-background/60 backdrop-blur-xl border-white/5 shadow-2xl rounded-3xl overflow-hidden h-full">
-              <CardContent className="p-0 flex flex-col h-full">
-                 <div className="p-6 bg-gradient-to-br from-primary/10 via-background to-background flex-1">
-                    <div className="flex justify-between items-end mb-8 border-b border-border/50 pb-6">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Target Assessment</p>
-                          <h3 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/50">{data.scores.final_score} <span className="text-xl text-muted-foreground">/ 100</span></h3>
+          <div className="xl:col-span-4 w-full">
+            <Card className="bg-background border-border/50 shadow-sm rounded-xl overflow-hidden h-full">
+              <CardContent className="p-0 flex flex-col h-full bg-muted/10">
+                 <div className="p-6 flex-1">
+                    <div className="flex justify-between items-start border-b border-border/50 pb-5 mb-5">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Global Score</span>
+                          <span className="text-4xl font-black text-foreground mt-1">{data.scores.final_score} <span className="text-lg font-normal text-muted-foreground">/ 100</span></span>
                         </div>
-                        <div className="text-right">
-                           <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest mb-1">Sentiment</p>
-                           <div className="flex items-center gap-2 font-bold justify-end">
-                              <span className="text-emerald-500">{data.news.sentiment_counts.positive || 0}</span> / 
-                              <span className="text-slate-500">{data.news.sentiment_counts.neutral || 0}</span> / 
+                        <div className="flex flex-col text-right">
+                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sentiment</span>
+                           <div className="flex items-center gap-1.5 font-bold justify-end mt-1.5 text-sm bg-muted/50 px-2 py-1 rounded-md border border-border/50">
+                              <span className="text-emerald-500">{data.news.sentiment_counts.positive || 0}</span>
+                              <span className="text-muted-foreground font-normal">|</span>
+                              <span className="text-slate-500">{data.news.sentiment_counts.neutral || 0}</span>
+                              <span className="text-muted-foreground font-normal">|</span>
                               <span className="text-rose-500">{data.news.sentiment_counts.negative || 0}</span>
                            </div>
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-                        <div className="space-y-4">
-                           <h4 className="font-semibold border-b border-border/50 pb-2 flex justify-between items-center text-primary">Technicals <span>{data.scores.tech_score}</span></h4>
-                           <div className="space-y-3 text-sm">
-                              <div className="flex justify-between"><span>RSI Status</span> <span className="font-medium">{data.technical.rsi}</span></div>
-                              <div className="flex justify-between"><span>MACD Signal</span> <span className="font-medium">{data.technical.macd}</span></div>
-                              <div className="flex justify-between"><span>Trend Zone</span> <span className="font-medium">{data.technical.trend_zone}</span></div>
-                              <div className="flex justify-between"><span>Volume Spike</span> <span className="font-medium">{data.technical.volume_spike ? "Detected" : "Normal"}</span></div>
+                    <div className="space-y-6 flex-1">
+                        <div className="space-y-3">
+                           <div className="flex justify-between items-center bg-muted/30 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider border border-border/50">
+                             <span>Technicals</span>
+                             <span className="text-primary">{data.scores.tech_score}</span>
+                           </div>
+                           <div className="grid grid-cols-2 gap-y-3 gap-x-4 px-2 text-xs">
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">RSI Status</span> <span className="font-bold">{data.technical.rsi}</span></div>
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">MACD Signal</span> <span className="font-bold">{data.technical.macd}</span></div>
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">Trend Zone</span> <span className="font-bold truncate" title={data.technical.trend_zone}>{data.technical.trend_zone}</span></div>
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">Volume Spike</span> <span className="font-bold">{data.technical.volume_spike ? "Detected" : "Normal"}</span></div>
                            </div>
                         </div>
                         
-                        <div className="space-y-4">
-                           <h4 className="font-semibold border-b border-border/50 pb-2 flex justify-between items-center text-primary">Fundamentals <span>{data.scores.fund_score}</span></h4>
-                           <div className="space-y-3 text-sm">
-                              <div className="flex justify-between"><span>P/B Ratio</span> <span className="font-medium">{data.fundamentals?.pb?.toFixed(2) ?? "N/A"}</span></div>
-                              <div className="flex justify-between"><span>Market Cap</span> <span className="font-medium">{formatMarketCap(data.fundamentals?.market_cap)}</span></div>
-                              <div className="flex justify-between"><span>Earn. Growth</span> <span className="font-medium">{data.fundamentals?.earnings_growth ? `${(data.fundamentals.earnings_growth * 100).toFixed(1)}%` : "N/A"}</span></div>
-                              <div className="flex justify-between"><span>Trailing P/E</span> <span className="font-medium">{data.fundamentals?.pe?.toFixed(2) ?? "N/A"}</span></div>
+                        <div className="space-y-3">
+                           <div className="flex justify-between items-center bg-muted/30 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider border border-border/50">
+                             <span>Fundamentals</span>
+                             <span className="text-primary">{data.scores.fund_score}</span>
+                           </div>
+                           <div className="grid grid-cols-2 gap-y-3 gap-x-4 px-2 text-xs">
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">P/B Ratio</span> <span className="font-bold">{data.fundamentals?.pb?.toFixed(2) ?? "N/A"}</span></div>
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">Market Cap</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.market_cap)}</span></div>
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">Earn. Growth</span> <span className="font-bold">{data.fundamentals?.earnings_growth ? `${(data.fundamentals.earnings_growth * 100).toFixed(1)}%` : "N/A"}</span></div>
+                              <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">Trailing P/E</span> <span className="font-bold">{data.fundamentals?.pe?.toFixed(2) ?? "N/A"}</span></div>
                            </div>
                         </div>
                     </div>
@@ -341,18 +350,21 @@ export default function StockAnalyzer() {
             </Card>
           </div>
 
-          <div className="xl:col-span-12 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
-            <div className="bg-background/60 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl p-2 flex overflow-hidden">
-               <div className="w-full scale-[1.02] transform origin-top"><TVTechnicalAnalysis ticker={ticker} height={400} /></div>
+          <div className="xl:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
+               <div className="w-full h-full flex"><TVTechnicalAnalysis ticker={ticker} height={400} /></div>
             </div>
-            <div className="bg-background/60 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl p-2 flex overflow-hidden">
-               <div className="w-full scale-[1.02] transform origin-top"><TVFinancials ticker={ticker} height={400} /></div>
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
+               <div className="w-full h-full flex"><TVFinancials ticker={ticker} height={400} /></div>
             </div>
-            <div className="bg-background/60 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl p-2 flex overflow-hidden">
-               <div className="w-full scale-[1.02] transform origin-top"><TVSymbolProfile ticker={ticker} height={400} /></div>
+          </div>
+          
+          <div className="xl:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden">
+               <div className="w-full flex"><TVSymbolProfile ticker={ticker} height={400} /></div>
             </div>
-            <div className="bg-background/60 backdrop-blur-xl rounded-3xl border border-white/5 shadow-2xl p-2 flex overflow-hidden">
-               <div className="w-full scale-[1.02] transform origin-top"><TVTimelineNews ticker={ticker} height={400} /></div>
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden">
+               <div className="w-full flex"><TVTimelineNews ticker={ticker} height={400} /></div>
             </div>
           </div>
 
