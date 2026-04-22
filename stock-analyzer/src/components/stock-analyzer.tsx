@@ -55,8 +55,18 @@ type StockResponse = {
     forward_pe?: number;
     trailing_pe?: number;
     market_cap?: number;
+    enterprise_value?: number;
+    ev_ebitda?: number;
+    ps?: number;
+    pcf?: number;
+    pfcf?: number;
     earnings_growth?: number;
     revenue_growth?: number;
+    operating_margin?: number;
+    gross_margin?: number;
+    net_margin?: number;
+    operating_cash_flow?: number;
+    free_cash_flow?: number;
     fpe?: number;
   };
   news: {
@@ -459,8 +469,38 @@ export default function StockAnalyzer() {
             <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
                <div className="w-full h-full flex"><TVTechnicalAnalysis ticker={ticker} height={400} /></div>
             </div>
-            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
-               <div className="w-full h-full flex"><TVFinancials ticker={ticker} height={400} /></div>
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:flex flex-col h-[400px]">
+               <div className="p-4 border-b border-border/50 bg-muted/20 flex justify-between items-center">
+                 <h2 className="font-bold text-xs tracking-widest uppercase">Financials & Valuation</h2>
+               </div>
+               <div className="flex-1 overflow-y-auto p-5 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                  <div className="space-y-6">
+                     <div>
+                       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 border-b border-border/30 pb-1">Valuation</h3>
+                       <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-xs">
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Market Cap</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.market_cap)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Enterprise Value</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.enterprise_value)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">EV/EBITDA</span> <span className="font-bold">{data.fundamentals?.ev_ebitda?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/E Ratio</span> <span className="font-bold">{data.fundamentals?.pe?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/S Ratio</span> <span className="font-bold">{data.fundamentals?.ps?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/B Ratio</span> <span className="font-bold">{data.fundamentals?.pb?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/CF Ratio</span> <span className="font-bold">{data.fundamentals?.pcf?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/FCF Ratio</span> <span className="font-bold">{data.fundamentals?.pfcf?.toFixed(2) ?? "N/A"}</span></div>
+                       </div>
+                     </div>
+                     <div>
+                       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 border-b border-border/30 pb-1">Profitability & Cash Flow</h3>
+                       <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-xs">
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Gross Margin</span> <span className="font-bold">{data.fundamentals?.gross_margin ? `${(data.fundamentals.gross_margin * 100).toFixed(2)}%` : "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Operating Margin</span> <span className="font-bold">{data.fundamentals?.operating_margin ? `${(data.fundamentals.operating_margin * 100).toFixed(2)}%` : "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Net Margin</span> <span className="font-bold">{data.fundamentals?.net_margin ? `${(data.fundamentals.net_margin * 100).toFixed(2)}%` : "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Operating Cash Flow</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.operating_cash_flow)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Free Cash Flow</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.free_cash_flow)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Earnings Growth</span> <span className="font-bold">{data.fundamentals?.earnings_growth ? `${(data.fundamentals.earnings_growth * 100).toFixed(2)}%` : "N/A"}</span></div>
+                       </div>
+                     </div>
+                  </div>
+               </div>
             </div>
           </div>
           
