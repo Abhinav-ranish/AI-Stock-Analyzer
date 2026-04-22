@@ -34,7 +34,13 @@ export default function TVAdvancedChart({ ticker, height = 500 }: Props) {
       hide_volume: false,
       allow_symbol_change: true,
       calendar: false,
-      studies: ["Moving Average Ribbon@tv-basicstudies", "MACD@tv-basicstudies", "RSI@tv-basicstudies"],
+      studies: [
+        "Moving Average Ribbon@tv-basicstudies",
+        "MACD@tv-basicstudies",
+        "RSI@tv-basicstudies",
+        "BB@tv-basicstudies",
+        "StochasticRSI@tv-basicstudies"
+      ],
     });
 
     container.current.innerHTML = "";
