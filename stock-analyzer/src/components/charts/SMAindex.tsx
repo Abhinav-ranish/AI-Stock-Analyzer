@@ -1,5 +1,4 @@
 "use client";
-import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 type Props = {
@@ -8,8 +7,6 @@ type Props = {
 };
 
 export default function TradingViewWidget({ ticker, height = 600 }: Props) {
-  const { resolvedTheme } = useTheme();
-  if (!resolvedTheme) return null;
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,12 +20,14 @@ export default function TradingViewWidget({ ticker, height = 600 }: Props) {
       symbol: ticker,
       interval: "D",
       timezone: "Etc/UTC",
-      theme: resolvedTheme === "dark" ? "dark" : "light",
+      theme: "light",
       style: "1",
       locale: "en",
       enable_publishing: false,
       hide_top_toolbar: false,
       allow_symbol_change: false,
+      backgroundColor: "rgba(255, 255, 255, 1)",
+      gridColor: "rgba(0, 0, 0, 0.06)",
       width: "100%",
       height,
       studies: ["Moving Average Ribbon"], // 👈 replace with actual username@title
@@ -36,7 +35,7 @@ export default function TradingViewWidget({ ticker, height = 600 }: Props) {
 
     container.current.innerHTML = "";
     container.current.appendChild(script);
-  }, [ticker, height, resolvedTheme]);
+  }, [ticker, height]);
 
-  return <div ref={container} className="w-full" style={{ height }} />;
+  return <div ref={container} className="w-full dark:invert dark:hue-rotate-180" style={{ height }} />;
 }

@@ -1,10 +1,7 @@
 "use client";
-import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVTimelineNews({ ticker, height = 550 }: { ticker: string; height?: number }) {
-  const { resolvedTheme } = useTheme();
-  if (!resolvedTheme) return null;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,8 +14,8 @@ export default function TVTimelineNews({ ticker, height = 550 }: { ticker: strin
     script.innerHTML = JSON.stringify({
       feedMode: "symbol",
       symbol: `NASDAQ:${ticker.toUpperCase()}`, 
-      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
-      isTransparent: true,
+      colorTheme: "light",
+      isTransparent: false,
       displayMode: "regular",
       width: "100%",
       height,
@@ -27,7 +24,7 @@ export default function TVTimelineNews({ ticker, height = 550 }: { ticker: strin
 
     ref.current.innerHTML = "";
     ref.current.appendChild(script);
-  }, [ticker, height, resolvedTheme]);
+  }, [ticker, height]);
 
-  return <div ref={ref} className="w-full" style={{ height }} />;
+  return <div ref={ref} className="w-full h-full dark:invert dark:hue-rotate-180" style={{ height }} />;
 }

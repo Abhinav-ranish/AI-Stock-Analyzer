@@ -1,10 +1,7 @@
 "use client";
-import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVSymbolInfo({ ticker }: { ticker: string }) {
-  const { resolvedTheme } = useTheme();
-  if (!resolvedTheme) return null;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -18,13 +15,13 @@ export default function TVSymbolInfo({ ticker }: { ticker: string }) {
       symbol: ticker,
       width: "100%",
       locale: "en",
-      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
-      isTransparent: true,
+      colorTheme: "light",
+      isTransparent: false,
     });
 
     ref.current.innerHTML = "";
     ref.current.appendChild(script);
-  }, [ticker, resolvedTheme]);
+  }, [ticker]);
 
-  return <div ref={ref} className="w-full" />;
+  return <div ref={ref} className="w-full h-[60px] dark:invert dark:hue-rotate-180 rounded-md overflow-hidden" />;
 }
