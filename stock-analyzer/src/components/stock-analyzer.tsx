@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTrigger,
   DialogTitle,
+  DialogHeader,
 } from "@/components/ui/dialog";
 import StockLinks from "./stock-links";
 import TVAdvancedChart from "./trading-view";
