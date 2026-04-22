@@ -1,7 +1,9 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVSymbolProfile({ ticker, height = 390 }: { ticker: string; height?: number }) {
+  const { resolvedTheme } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -13,7 +15,7 @@ export default function TVSymbolProfile({ ticker, height = 390 }: { ticker: stri
 
     script.innerHTML = JSON.stringify({
       symbol: ticker,
-      colorTheme: "black",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
       isTransparent: true,
       locale: "en",
       width: "100%",
@@ -22,7 +24,7 @@ export default function TVSymbolProfile({ ticker, height = 390 }: { ticker: stri
 
     ref.current.innerHTML = "";
     ref.current.appendChild(script);
-  }, [ticker, height]);
+  }, [ticker, height, resolvedTheme]);
 
   return <div ref={ref} className="w-full" style={{ height }} />;
 }

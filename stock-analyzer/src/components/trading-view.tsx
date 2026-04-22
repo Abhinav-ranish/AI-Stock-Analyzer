@@ -1,4 +1,5 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
 };
 
 export default function TVAdvancedChart({ ticker, height = 500}: Props) {
+  const { resolvedTheme } = useTheme();
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,7 +23,7 @@ export default function TVAdvancedChart({ ticker, height = 500}: Props) {
       interval: "D",
       autosize: true,
       timezone: "Etc/UTC",
-      theme: "dark",
+      theme: resolvedTheme === "dark" ? "dark" : "light",
       style: "1",
       locale: "en",
       backgroundColor: "#0F0F0F",
@@ -36,7 +38,7 @@ export default function TVAdvancedChart({ ticker, height = 500}: Props) {
 
     container.current.innerHTML = "";
     container.current.appendChild(script);
-  }, [ticker]);
+  }, [ticker, resolvedTheme]);
 
   return <div ref={container} className="w-full" style={{ height }} />;
 }

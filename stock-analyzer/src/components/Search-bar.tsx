@@ -2,6 +2,7 @@ import debounce from "lodash.debounce";
 import axios from "axios";
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 export default function TickerSearchInput({
   value,
@@ -16,7 +17,11 @@ export default function TickerSearchInput({
   const skipNextSearch = useRef(false);
 
   const search = debounce(async (text: string) => {
-    if (text.length < 2) return;
+    if (text.length < 2) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
     try {
       const res = await axios.get(`/api/search?q=${encodeURIComponent(text)}`);
       setResults(res.data.quotes || []);
@@ -44,24 +49,37 @@ export default function TickerSearchInput({
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full group">
+      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-muted-foreground group-focus-within:text-primary transition-colors">
+        <Search className="w-5 h-5" />
+      </div>
       <Input
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
-          onChange(e.target.value); // keep parent in sync
+          onChange(e.target.value);
         }}
-        placeholder="Enter ticker or company name..."
+        onFocus={() => {
+          if (results.length > 0) setShowDropdown(true);
+        }}
+        onBlur={() => {
+          // Delay blur to allow clicks to register on dropdown items
+          setTimeout(() => setShowDropdown(false), 200);
+        }}
+        className="pl-10 h-14 text-lg bg-background/50 backdrop-blur-md border-border/50 focus-visible:ring-primary/50 shadow-sm rounded-xl transition-all"
+        placeholder="Search ticker or company name..."
       />
+      
       {showDropdown && results.length > 0 && (
-        <ul className="absolute z-50 dark:bg-black bg-white border shadow w-full mt-1 rounded-md max-h-60 overflow-y-auto">
+        <ul className="absolute z-50 bg-background/80 backdrop-blur-xl border border-border/50 shadow-2xl w-full mt-2 rounded-xl max-h-72 overflow-y-auto">
           {results.map((r: any) => (
             <li
               key={r.symbol}
               onClick={() => handleSelect(r.symbol)}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+              className="px-4 py-3 hover:bg-primary/10 transition-colors cursor-pointer flex justify-between items-center"
             >
-              {r.shortname} ({r.symbol})
+              <span className="font-semibold">{r.symbol}</span>
+              <span className="text-sm text-muted-foreground truncate ml-4">{r.shortname}</span>
             </li>
           ))}
         </ul>

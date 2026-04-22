@@ -1,7 +1,9 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVTickerTape() {
+  const { resolvedTheme } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export default function TVTickerTape() {
         { proName: "NASDAQ:META" },
       ],
       showSymbolLogo: true,
-      colorTheme: "black",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
       isTransparent: true,
       displayMode: "adaptive",
       locale: "en",

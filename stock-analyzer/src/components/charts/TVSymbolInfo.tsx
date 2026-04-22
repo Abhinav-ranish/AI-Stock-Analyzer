@@ -1,7 +1,9 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVSymbolInfo({ ticker }: { ticker: string }) {
+  const { resolvedTheme } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,13 +17,13 @@ export default function TVSymbolInfo({ ticker }: { ticker: string }) {
       symbol: ticker,
       width: "100%",
       locale: "en",
-      colorTheme: "dark",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
       isTransparent: true,
     });
 
     ref.current.innerHTML = "";
     ref.current.appendChild(script);
-  }, [ticker]);
+  }, [ticker, resolvedTheme]);
 
   return <div ref={ref} className="w-full" />;
 }

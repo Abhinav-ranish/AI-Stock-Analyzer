@@ -1,7 +1,9 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVFinancials({ ticker, height = 550 }: { ticker: string; height?: number }) {
+  const { resolvedTheme } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -13,7 +15,7 @@ export default function TVFinancials({ ticker, height = 550 }: { ticker: string;
 
     script.innerHTML = JSON.stringify({
       symbol: ticker,
-      colorTheme: "black",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
       isTransparent: true,
       locale: "en",
       displayMode: "regular",
@@ -23,7 +25,7 @@ export default function TVFinancials({ ticker, height = 550 }: { ticker: string;
 
     ref.current.innerHTML = "";
     ref.current.appendChild(script);
-  }, [ticker, height]);
+  }, [ticker, height, resolvedTheme]);
 
   return <div ref={ref} className="w-full" style={{ height }} />;
 }

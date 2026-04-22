@@ -1,4 +1,5 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
 };
 
 export default function TradingViewWidget({ ticker, height = 600 }: Props) {
+  const { resolvedTheme } = useTheme();
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function TradingViewWidget({ ticker, height = 600 }: Props) {
       symbol: ticker,
       interval: "D",
       timezone: "Etc/UTC",
-      theme: "dark",
+      theme: resolvedTheme === "dark" ? "dark" : "light",
       style: "1",
       locale: "en",
       enable_publishing: false,
@@ -33,7 +35,7 @@ export default function TradingViewWidget({ ticker, height = 600 }: Props) {
 
     container.current.innerHTML = "";
     container.current.appendChild(script);
-  }, [ticker, height]);
+  }, [ticker, height, resolvedTheme]);
 
   return <div ref={container} className="w-full" style={{ height }} />;
 }

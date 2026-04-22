@@ -1,7 +1,9 @@
 "use client";
+import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
 
 export default function TVTechnicalAnalysis({ ticker, height = 450 }: { ticker: string; height?: number }) {
+  const { resolvedTheme } = useTheme();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,12 +22,12 @@ export default function TVTechnicalAnalysis({ ticker, height = 450 }: { ticker: 
       showIntervalTabs: true,
       displayMode: "single",
       locale: "en",
-      colorTheme: "black",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
     });
 
     ref.current.innerHTML = "";
     ref.current.appendChild(script);
-  }, [ticker, height]);
+  }, [ticker, height, resolvedTheme]);
 
   return <div ref={ref} className="w-full" style={{ height }} />;
 }
