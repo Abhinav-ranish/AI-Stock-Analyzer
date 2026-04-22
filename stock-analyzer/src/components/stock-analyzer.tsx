@@ -61,7 +61,7 @@ type StockResponse = {
   };
   news: {
     sentiment_counts: Record<string, number>;
-    top_stories: string[];
+    top_stories: { title: string; url: string; source: string; sentiment: string }[];
   };
   insider_trades?: any[];
 };
@@ -383,8 +383,33 @@ export default function StockAnalyzer() {
             <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden">
                <div className="w-full flex"><TVSymbolProfile ticker={ticker} height={400} /></div>
             </div>
-            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden">
-               <div className="w-full flex"><TVTimelineNews ticker={ticker} height={400} /></div>
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden flex flex-col h-[400px]">
+               <div className="p-4 border-b border-border/50 bg-muted/20 flex justify-between items-center">
+                 <h2 className="font-bold text-xs tracking-widest uppercase">Top Stories</h2>
+                 <span className="text-[10px] font-bold text-muted-foreground uppercase">{data.news.top_stories.length} Articles</span>
+               </div>
+               <div className="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                  {data.news.top_stories.length > 0 ? (
+                    <ul className="divide-y divide-border/30">
+                      {data.news.top_stories.map((story: any, idx: number) => (
+                        <li key={idx} className="p-4 hover:bg-muted/30 transition-colors group">
+                           <a href={story.url} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-2.5">
+                             <div className="flex items-center justify-between">
+                               <span className="text-[10px] font-bold text-primary/80 uppercase truncate max-w-[150px]" title={story.source}>{story.source}</span>
+                               <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded ${
+                                  story.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                                  story.sentiment === 'negative' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                               }`}>{story.sentiment}</span>
+                             </div>
+                             <h3 className="font-medium text-sm leading-snug group-hover:text-primary transition-colors text-foreground/90">{story.title}</h3>
+                           </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic tracking-wide">No recent stories found.</div>
+                  )}
+               </div>
             </div>
           </div>
 
