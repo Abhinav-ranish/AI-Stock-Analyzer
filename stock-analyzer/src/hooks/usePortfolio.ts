@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabase } from "@/lib/supabase";
 
 export type PortfolioEntry = {
   id: string;
   ticker: string;
   frequency: string;
-  user_id: string;
+  userId: string;
 };
 
 export function usePortfolio(userId: string | undefined) {
@@ -21,41 +20,35 @@ export function usePortfolio(userId: string | undefined) {
       return;
     }
 
-    const { data, error: fetchError } = await getSupabase()
-      .from("portfolio")
-      .select("*")
-      .eq("user_id", userId)
-      .order("ticker", { ascending: true });
-
-    if (fetchError) {
-      setError(fetchError.message);
-      setTickers([]);
-    } else {
+    try {
+      const res = await fetch("/api/portfolio");
+      if (!res.ok) throw new Error("Failed to fetch tickers");
+      const data = await res.json();
       setTickers(data || []);
       setError(null);
+    } catch (err: any) {
+      setError(err.message);
+      setTickers([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const addTicker = async (ticker: string, frequency: string) => {
     if (!userId) throw new Error("Not authenticated");
 
-    const { data: existing } = await getSupabase()
-      .from("portfolio")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("ticker", ticker)
-      .single();
+    const res = await fetch("/api/portfolio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker, frequency }),
+    });
 
-    if (existing) throw new Error("Stock already exists");
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to add ticker");
+    }
 
-    const { data, error: insertError } = await getSupabase()
-      .from("portfolio")
-      .insert({ user_id: userId, ticker, frequency })
-      .select()
-      .single();
-
-    if (insertError) throw new Error(insertError.message);
+    const data = await res.json();
     setTickers((prev) => [...prev, data]);
     return data;
   };
@@ -63,26 +56,34 @@ export function usePortfolio(userId: string | undefined) {
   const deleteTicker = async (ticker: string) => {
     if (!userId) throw new Error("Not authenticated");
 
-    const { error: deleteError } = await getSupabase()
-      .from("portfolio")
-      .delete()
-      .eq("user_id", userId)
-      .eq("ticker", ticker);
+    const res = await fetch("/api/portfolio", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker }),
+    });
 
-    if (deleteError) throw new Error(deleteError.message);
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to delete ticker");
+    }
+
     setTickers((prev) => prev.filter((t) => t.ticker !== ticker));
   };
 
   const updateFrequency = async (ticker: string, frequency: string) => {
     if (!userId) throw new Error("Not authenticated");
 
-    const { error: updateError } = await getSupabase()
-      .from("portfolio")
-      .update({ frequency })
-      .eq("user_id", userId)
-      .eq("ticker", ticker);
+    const res = await fetch("/api/portfolio", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker, frequency }),
+    });
 
-    if (updateError) throw new Error(updateError.message);
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to update ticker");
+    }
+
     setTickers((prev) =>
       prev.map((t) => (t.ticker === ticker ? { ...t, frequency } : t))
     );
