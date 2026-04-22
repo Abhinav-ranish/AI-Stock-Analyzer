@@ -1,0 +1,60 @@
+# AI Stock Analyzer - Full Documentation for LLMs
+
+AI-assisted stock evaluation tool that leverages Gemini for deep financial analysis.
+
+## Core Capabilities
+
+### 1. Stock Analysis Engine
+The application performs multi-faceted analysis on any given stock ticker:
+- **Fundamentals**: Extracts key metrics like P/E ratio, PEG, Debt-to-Equity, and more.
+- **Insider Trading**: Monitors recent transactions by company insiders.
+- **News Sentiment**: Analyzes recent news articles for market sentiment.
+- **Technical Analysis**: Calculates indicators and provides TradingView visualizations.
+- **AI Scoring**: Synthesizes all data points into a clear "Buy/Hold/Sell" score with detailed reasoning.
+
+### 2. Portfolio Management
+Users can:
+- Add stocks to a personal portfolio.
+- Track performance and total value.
+- View detailed breakdowns of their holdings.
+
+### 3. Interactive Visualization
+- Real-time charts via TradingView.
+- Technical indicator overlays.
+- Timeline of news events.
+
+## API Documentation (Internal)
+
+### GET /api/search?q={query}
+Search for stock tickers and company names.
+
+### GET /api/analyze?symbol={symbol}
+Trigger a full AI analysis for a specific symbol.
+
+### GET /api/fundamentals?symbol={symbol}
+Retrieve core financial metrics.
+
+### GET /api/news?symbol={symbol}
+Fetch recent news related to the ticker.
+
+## Data Schema
+
+### Stock Metadata
+- Symbol
+- Name
+- Sector
+- Industry
+
+### Analysis Result
+- Score (0-100)
+- Recommendation
+- Summary
+- Fundamental Analysis
+- Technical Analysis
+- News Sentiment Analysis
+- Insider Trading Analysis
+
+## Security & Ethics
+- Data is sourced from public APIs.
+- AI analysis is for informational purposes only and not financial advice.
+- User data is protected via Supabase Auth and Row Level Security.

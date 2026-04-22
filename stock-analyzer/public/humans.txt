@@ -1,0 +1,15 @@
+/* TEAM */
+  Main Developer: [AI-Stock-Analyzer Team]
+  Contact: hello@ai-stock-analyzer.example.com
+
+/* THANKS */
+  Google: For Gemini AI
+  TradingView: For charting components
+  Supabase: For backend services
+  Next.js: For the framework
+
+/* SITE */
+  Last update: 2026/04/14
+  Language: English
+  Doctype: HTML5
+  Tools: React, Next.js, Tailwind CSS, TypeScript

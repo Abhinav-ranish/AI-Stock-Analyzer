@@ -1,0 +1,24 @@
+# Stock Analyzer
+
+AI-assisted stock evaluation tool that leverages Gemini for deep financial analysis.
+
+## Core Features
+
+- **Stock Analysis**: Comprehensive analysis of stocks including fundamentals, technicals, news, and insider trading.
+- **AI Scoring**: Intelligent scoring of stocks based on multiple data points using Google's Gemini LLM.
+- **Portfolio Tracking**: Manage and track your stock investments in a single dashboard.
+- **Technical Indicators**: Real-time technical analysis indicators (SMA, RSI, etc.).
+- **TradingView Integration**: Embedded TradingView charts for professional visualization.
+
+## Technical Details
+
+- **Tech Stack**: Next.js (App Router), TypeScript, Tailwind CSS, Supabase.
+- **AI Engine**: Google Gemini Pro.
+- **Data Sources**: Yahoo Finance, News APIs, and more.
+
+## URLs
+
+- Home: /
+- Login: /login
+- Register: /register
+- Portfolio: /portfolio (Requires authentication)

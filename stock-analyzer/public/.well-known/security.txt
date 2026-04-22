@@ -1,0 +1,8 @@
+# security.txt - RFC 9116
+Contact: security@ai-stock-analyzer.example.com
+Expires: 2027-01-01T00:00:00.000Z
+Languages: en
+Preferred-Languages: en
+Canonical: https://ai-stock-analyzer.example.com/.well-known/security.txt
+Policy: https://ai-stock-analyzer.example.com/security-policy
+# For reporting security vulnerabilities, please contact the email above.
