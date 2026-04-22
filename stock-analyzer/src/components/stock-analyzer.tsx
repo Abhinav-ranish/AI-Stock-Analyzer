@@ -344,6 +344,28 @@ export default function StockAnalyzer() {
                               <div className="flex flex-col gap-1 border-b border-border/50 pb-2"><span className="text-muted-foreground font-medium">Trailing P/E</span> <span className="font-bold">{data.fundamentals?.pe?.toFixed(2) ?? "N/A"}</span></div>
                            </div>
                         </div>
+
+                        <div className="space-y-3">
+                           <div className="flex justify-between items-center bg-muted/30 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider border border-border/50">
+                             <span>Insider Activity</span>
+                             <span className="text-primary">{data.scores.insider_score ?? 0}</span>
+                           </div>
+                           <div className="px-2 text-xs">
+                              {data.insider_trades && data.insider_trades.length > 0 ? (
+                                 <ul className="space-y-2">
+                                   {data.insider_trades.slice(0, 3).map((t: any, i: number) => (
+                                      <li key={i} className="flex justify-between items-center border-b border-border/30 pb-2 last:border-0 last:pb-0">
+                                        <span className="truncate max-w-[120px] font-medium" title={t.name}>{t.name}</span>
+                                        <div className="text-right">
+                                           <span className={t.shares_changed > 0 ? 'text-emerald-500 font-bold block' : 'text-rose-500 font-bold block'}>{t.shares_changed > 0 ? '+' : ''}{t.shares_changed.toLocaleString()}</span>
+                                           <span className="text-[10px] text-muted-foreground">${(t.value / 1000).toFixed(0)}k</span>
+                                        </div>
+                                      </li>
+                                   ))}
+                                 </ul>
+                              ) : <span className="text-muted-foreground italic tracking-wide">No recent significant activity</span>}
+                           </div>
+                        </div>
                     </div>
                  </div>
               </CardContent>

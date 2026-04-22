@@ -9,6 +9,7 @@ type Props = {
 
 export default function TVAdvancedChart({ ticker, height = 500}: Props) {
   const { resolvedTheme } = useTheme();
+  if (!resolvedTheme) return null;
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

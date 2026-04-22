@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import YahooFinance from "yahoo-finance2";
 
-const yahooFinance = new YahooFinance();
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 import {
   calculateRSI,
   calculateMACD,
@@ -254,10 +254,10 @@ async function fetchInsider(
 
     const filtered = (data.data || [])
       .map((t: any) => {
-        const shares = Math.abs(t.change || 0);
+        const shares = t.change || 0;
         const price = t.transactionPrice || 0;
-        const value = shares * price;
-        if (shares < 100_000 && value < 1_000_000) return null;
+        const value = Math.abs(shares) * price;
+        if (Math.abs(shares) < 1000 && value < 50_000) return null;
         return {
           name: t.name,
           shares_changed: shares,
