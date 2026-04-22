@@ -1,4 +1,4 @@
-import { getSupabase } from "./supabase";
+import { prisma } from "@/lib/prisma";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -67,45 +67,47 @@ async function getEmbedding(text: string): Promise<number[]> {
 }
 
 /**
- * Upsert a stock's embedding into Supabase and return similar stocks.
- * Gracefully returns empty array if Supabase is not configured or table doesn't exist.
+ * Upsert a stock's embedding into database and return similar stocks.
+ * Gracefully returns empty array if database is not configured or table doesn't exist.
  */
 export async function upsertAndFindPeers(
   profile: StockProfile,
   limit = 5
 ): Promise<string[]> {
   try {
-    const supabase = getSupabase();
     const text = buildEmbeddingText(profile);
     const embedding = await getEmbedding(text);
+    const embeddingStr = `[${embedding.join(",")}]`;
+
+    const metadata = {
+      sector: profile.sector,
+      industry: profile.industry,
+      market_cap: profile.market_cap,
+      updated_at: new Date().toISOString(),
+    };
 
     // Upsert this stock's embedding
-    await supabase.from("stock_embeddings").upsert(
-      {
-        ticker: profile.ticker,
-        embedding: JSON.stringify(embedding),
-        metadata: {
-          sector: profile.sector,
-          industry: profile.industry,
-          market_cap: profile.market_cap,
-          updated_at: new Date().toISOString(),
-        },
-      },
-      { onConflict: "ticker" }
-    );
+    await prisma.$executeRaw`
+      INSERT INTO "StockEmbedding" (id, ticker, embedding, metadata, "updatedAt")
+      VALUES (gen_random_uuid(), ${profile.ticker}, ${embeddingStr}::vector, ${metadata}::jsonb, now())
+      ON CONFLICT (ticker) DO UPDATE SET 
+        embedding = EXCLUDED.embedding, 
+        metadata = EXCLUDED.metadata, 
+        "updatedAt" = EXCLUDED."updatedAt"
+    `;
 
     // Find similar stocks (excluding self)
-    const { data, error } = await supabase.rpc("match_stocks", {
-      query_embedding: JSON.stringify(embedding),
-      match_count: limit + 1,
-    });
+    const data = await prisma.$queryRaw<{ ticker: string }[]>`
+      SELECT ticker 
+      FROM "StockEmbedding" 
+      WHERE ticker != ${profile.ticker}
+      ORDER BY embedding <=> ${embeddingStr}::vector 
+      LIMIT ${limit}
+    `;
 
-    if (error || !data) return [];
+    if (!data) return [];
 
-    return data
-      .filter((row: { ticker: string }) => row.ticker !== profile.ticker)
-      .slice(0, limit)
-      .map((row: { ticker: string }) => row.ticker);
+    return data.map((row) => row.ticker);
   } catch (e) {
     console.error("[EMBEDDINGS]", e);
     return [];
