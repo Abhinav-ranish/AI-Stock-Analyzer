@@ -346,21 +346,51 @@ export default function StockAnalyzer() {
                         <div className="space-y-3">
                            <div className="flex justify-between items-center bg-muted/30 px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider border border-border/50">
                              <span>Insider Activity</span>
-                             <span className="text-primary">{data.scores.insider_score ?? 0}</span>
+                             <span className="text-primary">{data.scores.insider_score != null ? (data.scores.insider_score * 100).toFixed(0) : "0"} <span className="text-[10px] text-muted-foreground font-normal">/ 100</span></span>
                            </div>
                            <div className="px-2 text-xs">
                               {data.insider_trades && data.insider_trades.length > 0 ? (
-                                 <ul className="space-y-2">
-                                   {data.insider_trades.slice(0, 3).map((t: any, i: number) => (
-                                      <li key={i} className="flex justify-between items-center border-b border-border/30 pb-2 last:border-0 last:pb-0">
-                                        <span className="truncate max-w-[120px] font-medium" title={t.name}>{t.name}</span>
-                                        <div className="text-right">
-                                           <span className={t.shares_changed > 0 ? 'text-emerald-500 font-bold block' : 'text-rose-500 font-bold block'}>{t.shares_changed > 0 ? '+' : ''}{t.shares_changed.toLocaleString()}</span>
-                                           <span className="text-[10px] text-muted-foreground">${(t.value / 1000).toFixed(0)}k</span>
-                                        </div>
-                                      </li>
-                                   ))}
-                                 </ul>
+                                 <div className="space-y-3">
+                                   <ul className="space-y-2">
+                                     {data.insider_trades.slice(0, 3).map((t: any, i: number) => (
+                                        <li key={i} className="flex justify-between items-center border-b border-border/30 pb-2 last:border-0 last:pb-0">
+                                          <span className="truncate max-w-[120px] font-medium" title={t.name}>{t.name}</span>
+                                          <div className="text-right">
+                                             <span className={t.shares_changed > 0 ? 'text-emerald-500 font-bold block leading-none' : 'text-rose-500 font-bold block leading-none'}>{t.shares_changed > 0 ? '+' : ''}{t.shares_changed.toLocaleString()}</span>
+                                             <span className="text-[10px] text-muted-foreground">${(t.value / 1000).toFixed(0)}k</span>
+                                          </div>
+                                        </li>
+                                     ))}
+                                   </ul>
+                                   {data.insider_trades.length > 3 && (
+                                      <Dialog>
+                                        <DialogTrigger asChild>
+                                           <Button variant="outline" size="sm" className="w-full text-[10px] h-7 uppercase tracking-wider bg-background/50 hover:bg-muted">View All {data.insider_trades.length} Trades</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col bg-background/95 backdrop-blur-xl border border-border/50">
+                                           <DialogHeader className="pb-3 border-b border-border/50">
+                                              <DialogTitle className="text-sm font-bold uppercase tracking-widest text-primary">Full Insider Activity</DialogTitle>
+                                           </DialogHeader>
+                                           <div className="overflow-y-auto px-1 py-2 flex-1 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                                             <ul className="space-y-3">
+                                               {data.insider_trades.map((t: any, i: number) => (
+                                                  <li key={i} className="flex justify-between items-center border-b border-border/30 pb-3 last:border-0">
+                                                    <div className="flex flex-col">
+                                                      <span className="font-bold text-sm text-foreground/90" title={t.name}>{t.name}</span>
+                                                      <span className="text-[10px] text-muted-foreground uppercase mt-0.5">{t.date} | Code: {t.code}</span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                       <span className={t.shares_changed > 0 ? 'text-emerald-500 font-bold block text-sm' : 'text-rose-500 font-bold block text-sm'}>{t.shares_changed > 0 ? '+' : ''}{t.shares_changed.toLocaleString()}</span>
+                                                       <span className="text-xs text-muted-foreground">${(t.value / 1000).toFixed(0)}k Value</span>
+                                                    </div>
+                                                  </li>
+                                               ))}
+                                             </ul>
+                                           </div>
+                                        </DialogContent>
+                                      </Dialog>
+                                   )}
+                                 </div>
                               ) : <span className="text-muted-foreground italic tracking-wide">No recent significant activity</span>}
                            </div>
                         </div>
