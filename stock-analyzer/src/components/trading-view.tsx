@@ -38,8 +38,7 @@ export default function TVAdvancedChart({ ticker, height = 500 }: Props) {
         "Moving Average Ribbon@tv-basicstudies",
         "MACD@tv-basicstudies",
         "RSI@tv-basicstudies",
-        "BB@tv-basicstudies",
-        "StochasticRSI@tv-basicstudies"
+        "BB@tv-basicstudies"
       ],
     });
 
