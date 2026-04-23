@@ -249,7 +249,7 @@ export default function StockAnalyzer() {
       {data && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
           
-          {/* Left Column: Primary Charts and Grids */}
+          {/* Left Column: Primary Chart and AI Analyst */}
           <div className="xl:col-span-8 w-full flex flex-col gap-6">
             <Card className="bg-background border-border/50 shadow-sm overflow-hidden rounded-xl relative group w-full">
               <CardContent className="p-1">
@@ -268,57 +268,46 @@ export default function StockAnalyzer() {
                     </DialogContent>
                   </Dialog>
                 </div>
-                <TVAdvancedChart ticker={ticker} height={750} />
+                <TVAdvancedChart ticker={ticker} height={600} />
               </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
-              <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
-                 <div className="w-full h-full flex"><TVTechnicalAnalysis ticker={ticker} height={400} /></div>
-              </div>
-              <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
-                 <div className="w-full h-full flex"><TVFinancials ticker={ticker} height={400} /></div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-              <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden">
-                 <div className="w-full flex"><TVSymbolProfile ticker={ticker} height={400} /></div>
-              </div>
-              <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden flex flex-col h-[400px]">
-                 <div className="p-4 border-b border-border/50 bg-muted/20 flex justify-between items-center">
-                   <h2 className="font-bold text-xs tracking-widest uppercase">Top Stories</h2>
-                   <span className="text-[10px] font-bold text-muted-foreground uppercase">{data.news.top_stories.length} Articles</span>
-                 </div>
-                 <div className="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-muted-foreground/20">
-                    {data.news.top_stories.length > 0 ? (
-                      <ul className="divide-y divide-border/30">
-                        {data.news.top_stories.map((story: any, idx: number) => (
-                          <li key={idx} className="p-4 hover:bg-muted/30 transition-colors group">
-                             <a href={story.url} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-2.5">
-                               <div className="flex items-center justify-between">
-                                 <span className="text-[10px] font-bold text-primary/80 uppercase truncate max-w-[150px]" title={story.source}>{story.source}</span>
-                                 <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded ${
-                                    story.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
-                                    story.sentiment === 'negative' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                                 }`}>{story.sentiment}</span>
-                               </div>
-                               <h3 className="font-medium text-sm leading-snug group-hover:text-primary transition-colors text-foreground/90">{story.title}</h3>
-                             </a>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic tracking-wide">No recent stories found.</div>
-                    )}
-                 </div>
-              </div>
-            </div>
+            <Card className="bg-background border-border/50 shadow-sm rounded-xl flex-1 flex flex-col w-full h-[400px]">
+              <CardContent className="p-5 flex-1 flex flex-col h-full">
+                <Tabs defaultValue="rec" className="w-full h-full flex flex-col">
+                    <TabsList className="grid grid-cols-4 w-full bg-muted/40 p-1 rounded-md mb-5 border border-border/30">
+                      <TabsTrigger value="rec" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Report</TabsTrigger>
+                      <TabsTrigger value="strengths" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Bull</TabsTrigger>
+                      <TabsTrigger value="weaknesses" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Bear</TabsTrigger>
+                      <TabsTrigger value="fundamentals" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Mkt</TabsTrigger>
+                    </TabsList>
+                    
+                    <div className="flex-1 bg-muted/20 rounded-md p-5 border border-border/30 prose prose-sm dark:prose-invert max-w-none overflow-y-auto w-full text-foreground/90">
+                      <TabsContent value="rec" className="mt-0">
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">Analyst Verdict</h2>
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.recommendation || "_No data generated._"}</ReactMarkdown>
+                      </TabsContent>
+                      <TabsContent value="strengths" className="mt-0">
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Bull Case</h2>
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.strengths || "_No data generated._"}</ReactMarkdown>
+                      </TabsContent>
+                      <TabsContent value="weaknesses" className="mt-0">
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-rose-600 dark:text-rose-400">Bear Case</h2>
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.weaknesses || "_No data generated._"}</ReactMarkdown>
+                      </TabsContent>
+                      <TabsContent value="fundamentals" className="mt-0">
+                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-blue-600 dark:text-blue-400">Core Fundamentals</h2>
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.fundamentals || "_No data generated._"}</ReactMarkdown>
+                      </TabsContent>
+                    </div>
+                </Tabs>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Right Column: AI Verdict and Global Scores */}
+          {/* Right Column: Global Scores & Stats */}
           <div className="xl:col-span-4 w-full flex flex-col gap-6">
-            <Card className="bg-background border-border/50 shadow-sm rounded-xl overflow-hidden w-full">
+            <Card className="bg-background border-border/50 shadow-sm rounded-xl overflow-hidden w-full h-full">
               <CardContent className="p-0 flex flex-col h-full bg-muted/10">
                  <div className="p-6 flex-1">
                     <div className="flex justify-between items-start border-b border-border/50 pb-5 mb-5">
@@ -420,38 +409,83 @@ export default function StockAnalyzer() {
                  </div>
               </CardContent>
             </Card>
+          </div>
 
-            <Card className="bg-background border-border/50 shadow-sm rounded-xl flex-1 flex flex-col w-full">
-              <CardContent className="p-5 flex-1 flex flex-col">
-                <Tabs defaultValue="rec" className="w-full min-h-[400px] flex flex-col">
-                    <TabsList className="grid grid-cols-4 w-full bg-muted/40 p-1 rounded-md mb-5 border border-border/30">
-                      <TabsTrigger value="rec" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Report</TabsTrigger>
-                      <TabsTrigger value="strengths" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Bull</TabsTrigger>
-                      <TabsTrigger value="weaknesses" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Bear</TabsTrigger>
-                      <TabsTrigger value="fundamentals" className="rounded data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm text-sm font-medium transition-all">Mkt</TabsTrigger>
-                    </TabsList>
-                    
-                    <div className="flex-1 bg-muted/20 rounded-md p-5 border border-border/30 prose prose-sm dark:prose-invert max-w-none overflow-y-auto w-full text-foreground/90">
-                      <TabsContent value="rec" className="mt-0">
-                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">Analyst Verdict</h2>
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.recommendation || "_No data generated._"}</ReactMarkdown>
-                      </TabsContent>
-                      <TabsContent value="strengths" className="mt-0">
-                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Bull Case</h2>
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.strengths || "_No data generated._"}</ReactMarkdown>
-                      </TabsContent>
-                      <TabsContent value="weaknesses" className="mt-0">
-                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-rose-600 dark:text-rose-400">Bear Case</h2>
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.weaknesses || "_No data generated._"}</ReactMarkdown>
-                      </TabsContent>
-                      <TabsContent value="fundamentals" className="mt-0">
-                        <h2 className="text-xl font-bold mb-3 uppercase tracking-wide text-blue-600 dark:text-blue-400">Core Fundamentals</h2>
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{sections.fundamentals || "_No data generated._"}</ReactMarkdown>
-                      </TabsContent>
-                    </div>
-                </Tabs>
-              </CardContent>
-            </Card>
+          {/* Bottom Row Sec 1: Secondary TradingView & Native Financials */}
+          <div className="xl:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:block">
+               <div className="w-full h-full flex"><TVTechnicalAnalysis ticker={ticker} height={400} /></div>
+            </div>
+            
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden hidden xl:flex flex-col h-[400px]">
+               <div className="p-4 border-b border-border/50 bg-muted/20 flex justify-between items-center">
+                 <h2 className="font-bold text-xs tracking-widest uppercase">Financials & Valuation</h2>
+               </div>
+               <div className="flex-1 overflow-y-auto p-5 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                  <div className="space-y-6">
+                     <div>
+                       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 border-b border-border/30 pb-1">Valuation</h3>
+                       <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-xs">
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Market Cap</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.market_cap)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Enterprise Value</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.enterprise_value)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">EV/EBITDA</span> <span className="font-bold">{data.fundamentals?.ev_ebitda?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/E Ratio</span> <span className="font-bold">{data.fundamentals?.pe?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/S Ratio</span> <span className="font-bold">{data.fundamentals?.ps?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/B Ratio</span> <span className="font-bold">{data.fundamentals?.pb?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/CF Ratio</span> <span className="font-bold">{data.fundamentals?.pcf?.toFixed(2) ?? "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">P/FCF Ratio</span> <span className="font-bold">{data.fundamentals?.pfcf?.toFixed(2) ?? "N/A"}</span></div>
+                       </div>
+                     </div>
+                     <div>
+                       <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3 border-b border-border/30 pb-1">Profitability & Cash Flow</h3>
+                       <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-xs">
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Gross Margin</span> <span className="font-bold">{data.fundamentals?.gross_margin ? `${(data.fundamentals.gross_margin * 100).toFixed(2)}%` : "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Operating Margin</span> <span className="font-bold">{data.fundamentals?.operating_margin ? `${(data.fundamentals.operating_margin * 100).toFixed(2)}%` : "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Net Margin</span> <span className="font-bold">{data.fundamentals?.net_margin ? `${(data.fundamentals.net_margin * 100).toFixed(2)}%` : "N/A"}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Operating Cash Flow</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.operating_cash_flow)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Free Cash Flow</span> <span className="font-bold">{formatMarketCap(data.fundamentals?.free_cash_flow)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-muted-foreground font-medium">Earnings Growth</span> <span className="font-bold">{data.fundamentals?.earnings_growth ? `${(data.fundamentals.earnings_growth * 100).toFixed(2)}%` : "N/A"}</span></div>
+                       </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Bottom Row Sec 2: Profile & Top Stories Native */}
+          <div className="xl:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden">
+               <div className="w-full flex"><TVSymbolProfile ticker={ticker} height={400} /></div>
+            </div>
+            
+            <div className="bg-background rounded-xl border border-border/50 shadow-sm overflow-hidden flex flex-col h-[400px]">
+               <div className="p-4 border-b border-border/50 bg-muted/20 flex justify-between items-center">
+                 <h2 className="font-bold text-xs tracking-widest uppercase">Top Stories</h2>
+                 <span className="text-[10px] font-bold text-muted-foreground uppercase">{data.news.top_stories.length} Articles</span>
+               </div>
+               <div className="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-muted-foreground/20">
+                  {data.news.top_stories.length > 0 ? (
+                    <ul className="divide-y divide-border/30">
+                      {data.news.top_stories.map((story: any, idx: number) => (
+                        <li key={idx} className="p-4 hover:bg-muted/30 transition-colors group">
+                           <a href={story.url} target="_blank" rel="noopener noreferrer" className="flex flex-col gap-2.5">
+                             <div className="flex items-center justify-between">
+                               <span className="text-[10px] font-bold text-primary/80 uppercase truncate max-w-[150px]" title={story.source}>{story.source}</span>
+                               <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded ${
+                                  story.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+                                  story.sentiment === 'negative' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                               }`}>{story.sentiment}</span>
+                             </div>
+                             <h3 className="font-medium text-sm leading-snug group-hover:text-primary transition-colors text-foreground/90">{story.title}</h3>
+                           </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm italic tracking-wide">No recent stories found.</div>
+                  )}
+               </div>
+            </div>
           </div>
 
         </motion.div>
